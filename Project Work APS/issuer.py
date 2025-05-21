@@ -283,3 +283,4 @@ class UniversityIssuer:
         credential["proof"] = proof
 
         return credential
+
