@@ -1,0 +1,94 @@
+{
+  "users": [
+    {
+      "id": "cac8e4cd",
+      "nome": "Nome0",
+      "cognome": "Cognome0",
+      "salt": "046aa3af9df6bdfc6bb3382fb1c684a3",
+      "hash_password": "b72fd64952d2489942483c8164a917faa27c2a606ace3a121ffad43907e14a19",
+      "did": "did:example:cac8e4cd",
+      "created_at": 1747820914.164324
+    },
+    {
+      "id": "b039f8ea",
+      "nome": "Nome1",
+      "cognome": "Cognome1",
+      "salt": "5aeb326ebd4a7629acc082913c86e4a1",
+      "hash_password": "e4647ab4fa3cacbafafe8b3c626e1ca33b49b2057d10846452dd4eb552ae03a2",
+      "did": "did:example:b039f8ea",
+      "created_at": 1747820914.164469
+    },
+    {
+      "id": "4bb96e1f",
+      "nome": "Nome2",
+      "cognome": "Cognome2",
+      "salt": "d12d126b494fec63d8c2eb27e88230d0",
+      "hash_password": "d6e1fe0f1db253073c602daafdeb5e123bca5e5fbf5a6553fa968afe29a0b2a3",
+      "did": "did:example:4bb96e1f",
+      "created_at": 1747820914.164625
+    },
+    {
+      "id": "28672468",
+      "nome": "Nome3",
+      "cognome": "Cognome3",
+      "salt": "b1367d130735cc27da91ca7ccc0ca4fc",
+      "hash_password": "d2f315cca0389a7c12d1952f6236db49d26d0856546d96a4564cf59a8f5d2af6",
+      "did": "did:example:28672468",
+      "created_at": 1747820914.1647942
+    },
+    {
+      "id": "564973f1",
+      "nome": "Nome4",
+      "cognome": "Cognome4",
+      "salt": "2c56a5e4c6a489a4be70c76504c12f88",
+      "hash_password": "c7414b02c6934a6b45e925119244224f1a59319f69a1bee611d5624a1bf451ff",
+      "did": "did:example:564973f1",
+      "created_at": 1747820914.164969
+    },
+    {
+      "id": "a703b46d",
+      "nome": "Nome5",
+      "cognome": "Cognome5",
+      "salt": "0702c408b110b5f53472e19f08477655",
+      "hash_password": "13bcb4207d5456537e1e5034051b5fd52b822a7aefde7201aa977bf8fb8ce62b",
+      "did": "did:example:a703b46d",
+      "created_at": 1747820914.1652591
+    },
+    {
+      "id": "b84b7827",
+      "nome": "Nome6",
+      "cognome": "Cognome6",
+      "salt": "527130567ccecf24645ca510df079026",
+      "hash_password": "00ce239b89cdd40331b2bfd3b0864110aaeafab733bab3d8496dea370ef2aedd",
+      "did": "did:example:b84b7827",
+      "created_at": 1747820914.165451
+    },
+    {
+      "id": "2e13ca47",
+      "nome": "Nome7",
+      "cognome": "Cognome7",
+      "salt": "94ae8e494c5a9b447b086f9469276ffe",
+      "hash_password": "2e8320161590333efa2ec9ffd7e61b2cd762e1534723d720fe27d887d3a60f56",
+      "did": "did:example:2e13ca47",
+      "created_at": 1747820914.165762
+    },
+    {
+      "id": "10ff249a",
+      "nome": "Nome8",
+      "cognome": "Cognome8",
+      "salt": "2ba5735c9986d325cdef3226ed41938f",
+      "hash_password": "0bb9749fd444a15d97d13122e5ed4141a447b212c2cacc97b3f2811ef36b1256",
+      "did": "did:example:10ff249a",
+      "created_at": 1747820914.1659882
+    },
+    {
+      "id": "2c069cf0",
+      "nome": "Nome9",
+      "cognome": "Cognome9",
+      "salt": "59a4fa4b850b31a91c11d431caf8d27c",
+      "hash_password": "f5109b52cd3f870bcf40ff5bf80db94be88486043ba43cea3177139bb68c25d5",
+      "did": "did:example:2c069cf0",
+      "created_at": 1747820914.1662211
+    }
+  ]
+}
