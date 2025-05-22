@@ -2,18 +2,20 @@ from datetime import datetime, timedelta
 import json
 import uuid
 import base64
-import hashlib
 import random
 import string
 import os
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.exceptions import InvalidSignature
+from DatabaseManager import DatabaseManager
+
+UNIVERSITY_PRIVATE_KEY_PATH = "university_private_key.pem"
 
 
 class UniversityIssuer:
+    """Gestisce l'emissione e la verifica di credenziali verificabili"""
+
     def __init__(self, issuer_did, key_path=None):
         """
         Inizializza l'issuer con il suo DID
@@ -23,13 +25,14 @@ class UniversityIssuer:
             key_path (str, optional): Percorso al file .pem della chiave privata
         """
         self.issuer_did = issuer_did
-        self._private_key_path = key_path or "university_private_key.pem"
+        self._private_key_path = key_path or UNIVERSITY_PRIVATE_KEY_PATH
 
         # Se il file della chiave privata non esiste, ne generiamo uno nuovo
         if not os.path.exists(self._private_key_path):
             self._generate_and_save_key()
 
         self.challenges = {}  # Dizionario per tenere traccia dei challenge generati
+        self.db_manager = DatabaseManager()
 
     def _generate_and_save_key(self):
         """Genera una chiave privata RSA e la salva in un file .pem"""
@@ -45,6 +48,9 @@ class UniversityIssuer:
             format=serialization.PrivateFormat.PKCS8,
             encryption_algorithm=serialization.NoEncryption()  # In produzione usare BestAvailableEncryption
         )
+
+        # Crea la directory se non esiste
+        os.makedirs(os.path.dirname(self._private_key_path), exist_ok=True)
 
         # Salva la chiave privata in un file
         with open(self._private_key_path, 'wb') as f:
@@ -162,8 +168,14 @@ class UniversityIssuer:
         """
         # Genera un nonce casuale come challenge
         challenge = ''.join(random.choices(string.ascii_letters + string.digits, k=32))
+
         # Memorizza il challenge associato al DID dello studente
-        self.challenges[student_did] = challenge
+        self.challenges[student_did] = {
+            "value": challenge,
+            "created_at": datetime.now().isoformat(),
+            "expires_at": (datetime.now() + timedelta(minutes=5)).isoformat()
+        }
+
         return challenge
 
     def verify_challenge_response(self, student_did, signature, student_public_key_pem=None):
@@ -182,16 +194,26 @@ class UniversityIssuer:
         if student_did not in self.challenges:
             return {"status": "error", "message": "Nessun challenge trovato per questo studente"}
 
-        challenge = self.challenges[student_did]
+        challenge_data = self.challenges[student_did]
+        challenge = challenge_data["value"]
+
+        # Verifica che il challenge non sia scaduto
+        expires_at = datetime.fromisoformat(challenge_data["expires_at"])
+        if datetime.now() > expires_at:
+            return {"status": "error", "message": "Challenge scaduto"}
 
         # Se viene fornita la chiave pubblica, verifica effettivamente la firma
         if student_public_key_pem:
             if self.verify_signature(student_public_key_pem, challenge, signature):
+                # Rimuovi il challenge dopo l'uso
+                self.challenges.pop(student_did)
                 return {"status": "ok", "message": "Challenge verificato con successo"}
             else:
                 return {"status": "error", "message": "Firma del challenge non valida"}
         else:
             # Simulazione della verifica per compatibilità retroattiva
+            # Rimuovi il challenge dopo l'uso
+            self.challenges.pop(student_did)
             return {"status": "ok", "message": "Challenge verificato con successo (simulazione)"}
 
     def accept_application(self, student_did, application_data, signature, student_public_key_pem=None):
@@ -282,5 +304,10 @@ class UniversityIssuer:
         # Aggiungi la prova alla credenziale
         credential["proof"] = proof
 
+        # Salva la credenziale nel database
+
         return credential
+
+
+
 

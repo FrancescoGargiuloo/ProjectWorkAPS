@@ -239,62 +239,6 @@ class UserManager(DatabaseManager):
 
         return False
 
-    def update_user(self, user_id, field, value):
-        """
-        Aggiorna un campo dell'utente
 
-        Args:
-            user_id (str): ID dell'utente
-            field (str): Nome del campo da aggiornare
-            value: Nuovo valore
 
-        Returns:
-            bool: True se l'aggiornamento ha successo, False altrimenti
-        """
-        if field in ["id", "salt", "hash_password", "created_at"]:
-            print(f"Il campo {field} non può essere aggiornato")
-            return False
-
-        self._create_backup()
-        db = self._load_db()
-
-        for user in db["users"]:
-            if user["id"] == user_id:
-                user[field] = value
-                return self._save_db(db)
-
-        return False
-
-    def update_password(self, user_id, old_password, new_password):
-        """
-        Aggiorna la password dell'utente
-
-        Args:
-            user_id (str): ID dell'utente
-            old_password (str): Vecchia password
-            new_password (str): Nuova password
-
-        Returns:
-            bool: True se l'aggiornamento ha successo, False altrimenti
-        """
-        db = self._load_db()
-
-        for user in db["users"]:
-            if user["id"] == user_id:
-                # Verifica la vecchia password
-                if not PasswordManager.verify_password(user["hash_password"], old_password, user["salt"]):
-                    print("La vecchia password non è corretta")
-                    return False
-
-                # Genera un nuovo salt e hash per la nuova password
-                salt = PasswordManager.generate_salt()
-                hashed_password = PasswordManager.hash_password(new_password, salt)
-
-                # Aggiorna la password
-                user["salt"] = salt
-                user["hash_password"] = hashed_password
-
-                return self._save_db(db)
-
-        return False
 
