@@ -2,36 +2,34 @@ from holder import Student
 from issuer import UniversityIssuer
 from resolver import DIDWebResolver
 import json
-
+from DatabaseManager import UserManager
 if __name__ == "__main__":
-    # Dizionario utenti validi con username e password
-    valid_users = {
-        "mario": {"password": "ciao123", "data": {"name": "Mario Rossi", "studentId": "1234567"}},
-        "lucia": {"password": "password456", "data": {"name": "Lucia Bianchi", "studentId": "7654321"}}
-    }
 
-    # Richiesta di login all'utente
-    print("Per poter accedere, inserisca username e password:")
-    username = input("Username: ")
+    # Inizializza il gestore degli utenti
+    user_manager = UserManager()
+
+    # Richiesta di login all'utente, supposto già autenticato
+    print("Per poter accedere, inserisca nome, cognome e password:")
+    nome = input("Nome: ")
+    cognome = input("Cognome: ")
     password = input("Password: ")
+    # inizializza lo studente
+
+    student = Student(nome, cognome, password)
 
     # Percorsi delle chiavi
     student_key_path = "rsa.key"
-    student_public_key_path = "rsa_pub.key"  # Percorso specifico per la chiave pubblica
+    student_public_key_path = "rsa_pub.key"
     university_key_path = "university_private_key.pem"
 
-    # Crea un oggetto Student con username, password e percorso alle chiavi
-    student = Student(username, password, key_path=student_key_path, public_key_path=student_public_key_path)
+    # Autenticazione dell'utente tramite il database
+    # authenticated_user = user_manager.authenticate_user(nome, cognome, password)
 
-    # Verifica che username e password corrispondano a quelli validi
-    if username not in valid_users or valid_users[username]["password"] != password:
-        print("Accesso negato.")  # Se non validi, blocca l'accesso
-        exit(0)
+    #if not authenticated_user:
+    #    print("Accesso negato. Credenziali non valide.")
+    #    exit(0)
 
-    # Recupera i dati dello studente
-    student_data = valid_users[username]["data"]
-
-    print("Login riuscito!")
+    #print(f"Login riuscito! Benvenuto {authenticated_user['nome']} {authenticated_user['cognome']}")
 
     # Simulazione associazione del DID Web per lo studente
     did_web = "did:web:localhost:8443"
@@ -39,12 +37,13 @@ if __name__ == "__main__":
         # Prova a risolvere il DID usando il resolver (controlla che il documento DID sia accessibile)
         did_doc = DIDWebResolver.resolve(did_web)
         # Se ok, assegna il DID all'oggetto studente
-        student.did = did_web
         print("DID associato correttamente.")
     except Exception as e:
         # Se fallisce la risoluzione, stampa errore e termina
         print("Errore nella risoluzione del DID:", e)
         exit(1)
+
+    # associare il DID dello studente, una volta verificato, nel DB dell'uni
 
     # Crea un oggetto UniversityIssuer con il DID dell'issuer e il percorso alla chiave privata
     issuer = UniversityIssuer(did_web, key_path=university_key_path)

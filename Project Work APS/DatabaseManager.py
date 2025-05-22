@@ -6,7 +6,6 @@ from PasswordManager import PasswordManager
 
 # Configurazione
 DB_FILE = "dbVerifier.json"
-DB_BACKUP_FOLDER = "db_backups"
 KEY_FOLDER = "keys"
 UNIVERSITY_PRIVATE_KEY_PATH = os.path.join(KEY_FOLDER, "university_private_key.pem")
 DB_ENCRYPTION_KEY_PATH = os.path.join(KEY_FOLDER, "db_encryption.key")
@@ -23,7 +22,6 @@ class DatabaseManager:
             db_file (str): Percorso del file JSON del database
         """
         # Crea le cartelle se non esistono
-        os.makedirs(DB_BACKUP_FOLDER, exist_ok=True)
         os.makedirs(KEY_FOLDER, exist_ok=True)
         self.db_file = db_file
         self.encryption_key = self._load_or_create_encryption_key()
@@ -65,19 +63,6 @@ class DatabaseManager:
             }
             self._save_db(db_structure)
 
-    def _create_backup(self):
-        """Crea un backup del database prima di effettuare modifiche"""
-        if os.path.exists(self.db_file):
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_file = os.path.join(DB_BACKUP_FOLDER, f"db_backup_{timestamp}.json")
-            try:
-                with open(self.db_file, 'rb') as src, open(backup_file, 'wb') as dst:
-                    dst.write(src.read())
-                return True
-            except Exception as e:
-                print(f"Errore durante il backup del database: {e}")
-                return False
-        return False
 
     def _load_db(self):
         """Carica il database dal file JSON"""
@@ -88,8 +73,6 @@ class DatabaseManager:
                     return self._decrypt_db(encrypted_data)
             except Exception as e:
                 print(f"Errore durante il caricamento del database: {e}")
-                # Tenta di recuperare un backup
-                self._restore_from_latest_backup()
         return {
             "users": [],
             "credentials": [],
@@ -108,27 +91,6 @@ class DatabaseManager:
             return True
         except Exception as e:
             print(f"Errore durante il salvataggio del database: {e}")
-            return False
-
-    def _restore_from_latest_backup(self):
-        """Recupera il database dall'ultimo backup disponibile"""
-        backups = [os.path.join(DB_BACKUP_FOLDER, f) for f in os.listdir(DB_BACKUP_FOLDER) if
-                   f.startswith("db_backup_")]
-        if not backups:
-            print("Nessun backup trovato")
-            return False
-
-        # Ordina i backup per data (il più recente per primo)
-        backups.sort(reverse=True)
-        latest_backup = backups[0]
-
-        try:
-            with open(latest_backup, 'rb') as backup_file, open(self.db_file, 'wb') as db_file:
-                db_file.write(backup_file.read())
-            print(f"Database ripristinato dal backup: {latest_backup}")
-            return True
-        except Exception as e:
-            print(f"Errore durante il ripristino del backup: {e}")
             return False
 
 

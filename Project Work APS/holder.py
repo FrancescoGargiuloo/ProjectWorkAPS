@@ -22,7 +22,7 @@ class Student:
         """
         self.username = username
         self.password = password
-        self.did = None
+        self.did = ""
         self._private_key_path = key_path
         self._public_key_path = public_key_path
 
