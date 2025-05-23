@@ -1,10 +1,7 @@
-import json
-
 from holder import Student
 from issuer import UniversityIssuer
 from resolver import DIDWebResolver
 from DatabaseManager import UserManager
-from datetime import datetime
 
 if __name__ == "__main__":
     # === Autenticazione utente ===
@@ -28,8 +25,11 @@ if __name__ == "__main__":
     did_web = "did:web:localhost:8443"
 
     try:
-        did_document = DIDWebResolver.resolve(did_web)
+        result = DIDWebResolver.resolve(did_web)
+        did_document = result["document"]
+        student_public_key = result["publicKey"]
         print(f"DID risolto correttamente: {did_web}")
+        print("Chiave pubblica dello studente caricata.")
     except Exception as e:
         print("Errore nella risoluzione del DID:", e)
         exit(1)
@@ -44,12 +44,9 @@ if __name__ == "__main__":
             print("Errore durante l'associazione del DID.")
             exit(1)
 
-    # === Ottieni la chiave pubblica dello studente ===
-    student_public_key = student.get_public_key_pem()
-    print("Chiave pubblica dello studente caricata.")
 
     # === Inizializza l'issuer ===
-    issuer = UniversityIssuer(did_web)  # Anche qui, key viene gestita internamente
+    issuer = UniversityIssuer(did_web)
 
     # === Dati candidatura Erasmus ===
     erasmus_data = {
@@ -59,7 +56,7 @@ if __name__ == "__main__":
     signature = student.sign(erasmus_data)
 
     # === Invio candidatura firmata ===
-    response = issuer.accept_application(student.did, erasmus_data, signature, student_public_key)
+    response = issuer.accept_application(erasmus_data, signature, student_public_key)
     print("Risposta candidatura:", response)
 
     # === Autenticazione Challenge ===

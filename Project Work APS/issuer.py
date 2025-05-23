@@ -71,24 +71,21 @@ class UniversityIssuer:
             print(f"Errore nel caricamento della chiave privata: {e}")
             return None
 
-    def _sign(self, data):
+    def sign(self, data):
         """
-        Firma digitalmente i dati utilizzando la chiave privata dell'università
-
-        Args:
-            data (str): I dati da firmare
-
-        Returns:
-            str: Firma digitale in formato base64
+        Firma digitalmente i dati utilizzando la chiave privata dello studente
         """
-        # Carica la chiave privata
         private_key = self._load_private_key()
         if not private_key:
-            raise Exception("Impossibile caricare la chiave privata dell'università")
+            raise Exception("Impossibile caricare la chiave privata")
 
-        # Firma i dati con RSA
+        # Serializza i dati in formato JSON ordinato se è un dizionario
+        if isinstance(data, dict):
+            data = json.dumps(data, sort_keys=True)
+
+        # Firma i dati con RSA (usa 'data' già serializzato, non str(data))
         signature = private_key.sign(
-            str(data).encode(),
+            data.encode(),  # ← Cambiato qui
             padding.PSS(
                 mgf=padding.MGF1(hashes.SHA256()),
                 salt_length=padding.PSS.MAX_LENGTH
@@ -96,7 +93,6 @@ class UniversityIssuer:
             hashes.SHA256()
         )
 
-        # Restituisce la firma in formato base64
         return base64.b64encode(signature).decode()
 
     def get_public_key_pem(self):
@@ -220,23 +216,14 @@ class UniversityIssuer:
             self.challenges.pop(student_did)
             return {"status": "ok", "message": "Challenge verificato con successo (simulazione)"}
 
-    def accept_application(self, student_did, application_data, signature, student_public_key_pem=None):
+    def accept_application(self, application_data, signature, student_public_key_pem=None):
         """
         Accetta una candidatura Erasmus firmata dallo studente
-
-        Args:
-            student_did (str): Il DID dello studente
-            application_data (dict): I dati della candidatura
-            signature (str): La firma dei dati
-            student_public_key_pem (str, optional): Chiave pubblica dello studente in formato PEM
-
-        Returns:
-            dict: Risposta dell'accettazione
         """
         # Se viene fornita la chiave pubblica, verifica effettivamente la firma
         if student_public_key_pem:
-            data_str = str(application_data)
-            if not self.verify_signature(student_public_key_pem, data_str, signature):
+            # Passa direttamente il dizionario, non serializzarlo qui
+            if not self.verify_signature(student_public_key_pem, application_data, signature):
                 return {
                     "status": "rejected",
                     "message": "Firma della candidatura non valida",

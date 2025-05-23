@@ -195,6 +195,7 @@ class UserManager(DatabaseManager):
                 print("Utente già esistente.")
                 return False
         salt = PasswordManager.generate_salt()
+
         # Genera hash della password
         hash_password = PasswordManager.hash_password(password, salt)
 

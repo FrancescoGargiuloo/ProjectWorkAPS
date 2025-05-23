@@ -11,7 +11,8 @@ from cryptography.hazmat.primitives.asymmetric import padding
 
 
 class Student:
-    def __init__(self, username, public_key_path="rsa_pub.key"):
+    def __init__(self, username, public_key_path="rsa_pub.key"):#togliere la key come percorso e dare allo studente il did
+        # piuttosto che passarlo da main
         """
         Inizializza uno studente con username e password
 
