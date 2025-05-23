@@ -1,112 +1,79 @@
+import json
+
 from holder import Student
 from issuer import UniversityIssuer
 from resolver import DIDWebResolver
-import json
 from DatabaseManager import UserManager
+from datetime import datetime
 
 if __name__ == "__main__":
-
-    # Inizializza il gestore degli utenti
+    # === Autenticazione utente ===
     user_manager = UserManager()
 
-    # Richiesta di login all'utente, supposto già autenticato
-    print("Per poter accedere, inserisca Username e password: ")
-    username = input("Username: ") #fazeking
-    password = input("Password: ") #ciao
-    # inizializza lo studente
+    print("== Login Utente ==")
+    username = input("Username: ").strip()
+    password = input("Password: ").strip()
 
-    student = Student(username)
-    #user_manager.first_login("12345", username, password)
-    # Percorsi delle chiavi
-    student_key_path = "rsa_priv.key"
-    student_public_key_path = "rsa_pub.key"
-    university_key_path = "university_private_key.pem"
-
-     # Autenticazione dell'utente tramite il database
     authenticated_user = user_manager.authenticate_user(username, password)
-
     if not authenticated_user:
         print("Accesso negato. Credenziali non valide.")
-        exit(0)
+        exit(1)
 
-    #print(f"Login riuscito! Benvenuto {authenticated_user['nome']} {authenticated_user['cognome']}")
+    user_id = authenticated_user["id"]
 
-    # Simulazione associazione del DID Web per lo studente
+    # === Inizializza lo studente ===
+    student = Student(username)  # Gestisce creazione/lettura chiavi in automatico
+
+    # === Risoluzione del DID ===
     did_web = "did:web:localhost:8443"
+
     try:
-        # Prova a risolvere il DID usando il resolver (controlla che il documento DID sia accessibile)
-        did_doc = DIDWebResolver.resolve(did_web)
-        # Se ok, assegna il DID all'oggetto studente
-        print("DID DA ASSOCIARE NEL DB")
-        #print("DID DA ASSOCIARE NEL DB associato correttamente.")
+        did_document = DIDWebResolver.resolve(did_web)
+        print(f"DID risolto correttamente: {did_web}")
     except Exception as e:
-        # Se fallisce la risoluzione, stampa errore e termina
         print("Errore nella risoluzione del DID:", e)
         exit(1)
 
-    # associare il DID dello studente, una volta verificato, nel DB dell'uni
+    # === Associa DID allo studente se mancante ===
+    if not authenticated_user.get("did"):
+        print("Associando DID allo studente...")
+        update_success = user_manager.update_user_did(user_id, did_web)
+        if update_success:
+            print("DID associato correttamente al profilo dello studente.")
+        else:
+            print("Errore durante l'associazione del DID.")
+            exit(1)
 
-    # Crea un oggetto UniversityIssuer con il DID dell'issuer e il percorso alla chiave privata
-    issuer = UniversityIssuer(did_web, key_path=university_key_path)
-
-    # Ottiene la chiave pubblica dello studente per la verifica
+    # === Ottieni la chiave pubblica dello studente ===
     student_public_key = student.get_public_key_pem()
-    print("\nChiave pubblica dello studente recuperata da:", student_public_key_path)
+    print("Chiave pubblica dello studente caricata.")
 
-    # Dati della candidatura Erasmus da inviare firmati
+    # === Inizializza l'issuer ===
+    issuer = UniversityIssuer(did_web)  # Anche qui, key viene gestita internamente
+
+    # === Dati candidatura Erasmus ===
     erasmus_data = {
         "university": "UniRoma",
         "motivation": "Voglio crescere."
     }
+    signature = student.sign(erasmus_data)
 
-    # Trasforma i dati in stringa per firmarli
-    data_str = str(erasmus_data)
-
-    # Lo studente firma i dati
-    signature = student.sign(data_str)
-
-    # Invio candidatura all'issuer con dati, DID studente, firma e chiave pubblica
+    # === Invio candidatura firmata ===
     response = issuer.accept_application(student.did, erasmus_data, signature, student_public_key)
-    print("Risposta:", response)
+    print("Risposta candidatura:", response)
 
-    # Step 1: l'issuer genera un challenge (nonce) da far firmare allo studente
+    # === Autenticazione Challenge ===
     challenge = issuer.generate_challenge(student.did)
-    print("Challenge per lo studente:", challenge)
+    print("Challenge generato:", challenge)
 
-    # Lo studente firma il challenge ricevuto dall'issuer
     challenge_signature = student.sign(challenge)
 
-    # Step 2: l'issuer verifica la firma sul challenge firmato dallo studente
     result = issuer.verify_challenge_response(student.did, challenge_signature, student_public_key)
-    print("Verifica challenge:", result)
+    print("Risultato verifica challenge:", result)
 
-    # Se il challenge è stato verificato correttamente
     if result["status"] == "ok":
-        # Step 3: lo studente può inviare la candidatura firmata come prima
-        erasmus_data = {
-            "university": "UniRoma",
-            "motivation": "Voglio crescere."
-        }
-        data_str = str(erasmus_data)
-        signature = student.sign(data_str)
-        response = issuer.accept_application(student.did, erasmus_data, signature, student_public_key)
-        print("Risposta candidatura:", response)
-
-        # NUOVO STEP: Emissione della credenziale verificabile
-        #print("\n=== Emissione della Credenziale Verificabile ===")
-        #credential = issuer.issue_credential(student.did, student_data, erasmus_data)
-
-        # Stampa la credenziale in formato JSON formattato
-        #print("Credenziale emessa:")
-        #print(json.dumps(credential, indent=2))
-
-        # Lo studente memorizza la credenziale nel suo wallet
-        #student.store_credential(credential)
-        #print(f"Credenziale memorizzata nel wallet dello studente {student_data['name']}")
-
-        # Esempio di recupero della credenziale dal wallet
-        #erasmus_credentials = student.get_credential_by_type("ErasmusAcceptanceCredential")
-        #print(f"Numero di credenziali Erasmus nel wallet: {len(erasmus_credentials)}")
-    #else:
-        # Se la verifica challenge fallisce, blocca la candidatura
-        #print("Autenticazione fallita.")
+        print("\nAutenticazione challenge completata con successo.")
+        print("Lo studente può procedere con la candidatura ufficiale.")
+    else:
+        print("\nAutenticazione challenge fallita. Bloccare il processo.")
+        exit(1)

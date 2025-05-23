@@ -124,7 +124,7 @@ class UniversityIssuer:
 
         Args:
             student_public_key_pem (str): Chiave pubblica dello studente in formato PEM
-            data (str): I dati originali
+            data (str | dict): I dati originali
             signature (str): La firma da verificare in formato base64
 
         Returns:
@@ -136,10 +136,14 @@ class UniversityIssuer:
                 student_public_key_pem.encode()
             )
 
+            # Serializza i dati in formato JSON ordinato se è un dizionario
+            if isinstance(data, dict):
+                data = json.dumps(data, sort_keys=True)
+
             # Verifica la firma
             public_key.verify(
                 base64.b64decode(signature),
-                str(data).encode(),
+                data.encode(),
                 padding.PSS(
                     mgf=padding.MGF1(hashes.SHA256()),
                     salt_length=padding.PSS.MAX_LENGTH

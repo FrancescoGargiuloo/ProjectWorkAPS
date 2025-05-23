@@ -2,6 +2,7 @@ import hashlib
 import base64
 import random
 import string
+import json
 import os
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -70,19 +71,23 @@ class Student:
         Firma digitalmente i dati utilizzando la chiave privata dello studente
 
         Args:
-            data (str): I dati da firmare
+            data (str | dict): I dati da firmare
 
         Returns:
-            str: Firma digitale
+            str: Firma digitale in formato base64
         """
         # Carica la chiave privata
         private_key = self._load_private_key()
         if not private_key:
             raise Exception("Impossibile caricare la chiave privata")
 
+        # Serializza i dati in formato JSON ordinato se è un dizionario
+        if isinstance(data, dict):
+            data = json.dumps(data, sort_keys=True)
+
         # Firma i dati con RSA
         signature = private_key.sign(
-            str(data).encode(),
+            data.encode(),
             padding.PSS(
                 mgf=padding.MGF1(hashes.SHA256()),
                 salt_length=padding.PSS.MAX_LENGTH

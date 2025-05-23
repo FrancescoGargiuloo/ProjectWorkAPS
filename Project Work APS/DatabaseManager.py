@@ -210,7 +210,26 @@ class UserManager(DatabaseManager):
         db["users"].append(new_user)
         return self._save_db(db)
 
+    def update_user_did(self, user_id, new_did):
+        """
+        Aggiorna il DID di un utente.
 
+        Args:
+            user_id (str): ID dell'utente
+            new_did (str): Nuovo DID da assegnare
+
+        Returns:
+            bool: True se l'aggiornamento ha avuto successo, False altrimenti
+        """
+        db = self._load_db()
+
+        for user in db["users"]:
+            if user["id"] == user_id:
+                user["did"] = new_did
+                return self._save_db(db)
+
+        print(f"Utente con ID '{user_id}' non trovato.")
+        return False
 
 
 
