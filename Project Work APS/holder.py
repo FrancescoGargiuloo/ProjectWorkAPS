@@ -10,7 +10,7 @@ from cryptography.hazmat.primitives.asymmetric import padding
 
 
 class Student:
-    def __init__(self, username, password, key_path=None, public_key_path="rsa_pub.key"):
+    def __init__(self, username, public_key_path="rsa_pub.key"):
         """
         Inizializza uno studente con username e password
 
@@ -21,16 +21,13 @@ class Student:
             public_key_path (str, optional): Percorso al file della chiave pubblica
         """
         self.username = username
-        self.password = password
         self.did = ""
-        self._private_key_path = key_path
+        self._private_key_path = "rsa_priv.key"
         self._public_key_path = public_key_path
 
         # Se non viene fornito un percorso alla chiave, ne generiamo una nuova e la salviamo
-        if not key_path:
-            self._private_key_path = "rsa.key"
-            if not os.path.exists(self._private_key_path):
-                self._generate_and_save_key()
+        if not os.path.exists(self._private_key_path):
+            self._generate_and_save_key()
         self.credentials = []  # Lista per memorizzare le credenziali ricevute
 
     def _generate_and_save_key(self):
@@ -52,10 +49,8 @@ class Student:
         with open(self._private_key_path, 'wb') as f:
             f.write(pem)
 
-
-
         print(f"Chiave privata generata e salvata in: {self._private_key_path}")
-        print(f"Chiave pubblica generata e salvata in: {self._public_key_path}")
+        print(f"Chiave pubblica salvata in: {self._public_key_path}")
 
     def _load_private_key(self):
         """Carica la chiave privata dal file .pem"""

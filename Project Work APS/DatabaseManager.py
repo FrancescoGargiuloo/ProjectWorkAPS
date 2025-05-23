@@ -7,7 +7,6 @@ from PasswordManager import PasswordManager
 # Configurazione
 DB_FILE = "dbVerifier.json"
 KEY_FOLDER = "keys"
-UNIVERSITY_PRIVATE_KEY_PATH = os.path.join(KEY_FOLDER, "university_private_key.pem")
 DB_ENCRYPTION_KEY_PATH = os.path.join(KEY_FOLDER, "db_encryption.key")
 
 
@@ -51,17 +50,14 @@ class DatabaseManager:
         return json.loads(decrypted_data)
 
     def _init_db(self):
-        """Inizializza il database se non esiste"""
-        if not os.path.exists(self.db_file):
+        """Inizializza il database se non esiste o è vuoto"""
+        if not os.path.exists(self.db_file) or os.path.getsize(self.db_file) == 0:
             db_structure = {
-                "users": [],
-                "credentials": [],
-                "metadata": {
-                    "created_at": datetime.now().isoformat(),
-                    "version": "1.0"
-                }
+                "users": [],  # Ogni utente con: id, username, hash_password, salt, did
             }
-            self._save_db(db_structure)
+            success = self._save_db(db_structure)
+            if not success:
+                print("Errore durante l'inizializzazione del database.")
 
 
     def _load_db(self):
@@ -152,13 +148,12 @@ class UserManager(DatabaseManager):
         return None
 
 
-    def authenticate_user(self, nome, cognome, password):
+    def authenticate_user(self, username, password):
         """
         Verifica le credenziali dell'utente
 
         Args:
-            nome (str): Nome dell'utente
-            cognome (str): Cognome dell'utente
+            username (str): Username dell'utente
             password (str): Password in chiaro
 
         Returns:
@@ -167,12 +162,9 @@ class UserManager(DatabaseManager):
         db = self._load_db()
 
         for user in db["users"]:
-            if user["nome"].lower() == nome.lower() and user["cognome"].lower() == cognome.lower():
+            if user["username"].lower() == username.lower():
                 # Verifica la password
                 if PasswordManager.verify_password(user["hash_password"], password, user["salt"]):
-                    # Aggiorna l'ultimo accesso
-                    self._update_last_login(user["id"])
-
                     # Rimuovi i campi sensibili
                     user_copy = user.copy()
                     user_copy.pop('hash_password')
@@ -182,24 +174,42 @@ class UserManager(DatabaseManager):
 
         return None
 
-    def _update_last_login(self, user_id):
+    def first_login(self, user_id, username, password):
         """
-        Aggiorna la data dell'ultimo login
+        Registra un nuovo utente nel database.
 
         Args:
-            user_id (str): ID dell'utente
+            user_id (str): ID univoco dell'utente
+            username (str): Nome utente
+            password (str): Password in chiaro
+            did (str): DID dell'utente
 
         Returns:
-            bool: True se l'aggiornamento ha successo, False altrimenti
+            bool: True se l'inserimento ha avuto successo, False altrimenti
         """
         db = self._load_db()
 
+        # Verifica se esiste già un utente con stesso username o ID
         for user in db["users"]:
-            if user["id"] == user_id:
-                user["last_login"] = datetime.now().isoformat()
-                return self._save_db(db)
+            if user["id"] == user_id or user["username"].lower() == username.lower():
+                print("Utente già esistente.")
+                return False
+        salt = PasswordManager.generate_salt()
+        # Genera hash della password
+        hash_password = PasswordManager.hash_password(password, salt)
 
-        return False
+        new_user = {
+            "id": user_id,
+            "username": username,
+            "hash_password": hash_password,
+            "salt": salt,
+            "did": "",
+            "created_at": datetime.now().isoformat()
+        }
+
+        db["users"].append(new_user)
+        return self._save_db(db)
+
 
 
 

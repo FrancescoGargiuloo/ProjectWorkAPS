@@ -3,31 +3,31 @@ from issuer import UniversityIssuer
 from resolver import DIDWebResolver
 import json
 from DatabaseManager import UserManager
+
 if __name__ == "__main__":
 
     # Inizializza il gestore degli utenti
     user_manager = UserManager()
 
     # Richiesta di login all'utente, supposto già autenticato
-    print("Per poter accedere, inserisca nome, cognome e password:")
-    nome = input("Nome: ")
-    cognome = input("Cognome: ")
-    password = input("Password: ")
+    print("Per poter accedere, inserisca Username e password: ")
+    username = input("Username: ") #fazeking
+    password = input("Password: ") #ciao
     # inizializza lo studente
 
-    student = Student(nome, cognome, password)
-
+    student = Student(username)
+    #user_manager.first_login("12345", username, password)
     # Percorsi delle chiavi
-    student_key_path = "rsa.key"
+    student_key_path = "rsa_priv.key"
     student_public_key_path = "rsa_pub.key"
     university_key_path = "university_private_key.pem"
 
-    # Autenticazione dell'utente tramite il database
-    # authenticated_user = user_manager.authenticate_user(nome, cognome, password)
+     # Autenticazione dell'utente tramite il database
+    authenticated_user = user_manager.authenticate_user(username, password)
 
-    #if not authenticated_user:
-    #    print("Accesso negato. Credenziali non valide.")
-    #    exit(0)
+    if not authenticated_user:
+        print("Accesso negato. Credenziali non valide.")
+        exit(0)
 
     #print(f"Login riuscito! Benvenuto {authenticated_user['nome']} {authenticated_user['cognome']}")
 
@@ -37,7 +37,8 @@ if __name__ == "__main__":
         # Prova a risolvere il DID usando il resolver (controlla che il documento DID sia accessibile)
         did_doc = DIDWebResolver.resolve(did_web)
         # Se ok, assegna il DID all'oggetto studente
-        print("DID associato correttamente.")
+        print("DID DA ASSOCIARE NEL DB")
+        #print("DID DA ASSOCIARE NEL DB associato correttamente.")
     except Exception as e:
         # Se fallisce la risoluzione, stampa errore e termina
         print("Errore nella risoluzione del DID:", e)
@@ -92,20 +93,20 @@ if __name__ == "__main__":
         print("Risposta candidatura:", response)
 
         # NUOVO STEP: Emissione della credenziale verificabile
-        print("\n=== Emissione della Credenziale Verificabile ===")
-        credential = issuer.issue_credential(student.did, student_data, erasmus_data)
+        #print("\n=== Emissione della Credenziale Verificabile ===")
+        #credential = issuer.issue_credential(student.did, student_data, erasmus_data)
 
         # Stampa la credenziale in formato JSON formattato
-        print("Credenziale emessa:")
-        print(json.dumps(credential, indent=2))
+        #print("Credenziale emessa:")
+        #print(json.dumps(credential, indent=2))
 
         # Lo studente memorizza la credenziale nel suo wallet
-        student.store_credential(credential)
-        print(f"Credenziale memorizzata nel wallet dello studente {student_data['name']}")
+        #student.store_credential(credential)
+        #print(f"Credenziale memorizzata nel wallet dello studente {student_data['name']}")
 
         # Esempio di recupero della credenziale dal wallet
-        erasmus_credentials = student.get_credential_by_type("ErasmusAcceptanceCredential")
-        print(f"Numero di credenziali Erasmus nel wallet: {len(erasmus_credentials)}")
-    else:
+        #erasmus_credentials = student.get_credential_by_type("ErasmusAcceptanceCredential")
+        #print(f"Numero di credenziali Erasmus nel wallet: {len(erasmus_credentials)}")
+    #else:
         # Se la verifica challenge fallisce, blocca la candidatura
-        print("Autenticazione fallita.")
+        #print("Autenticazione fallita.")
