@@ -16,7 +16,6 @@ if __name__ == "__main__":
         print("Accesso negato. Credenziali non valide.")
         exit(1)
 
-    user_id = authenticated_user["id"]
 
     # === Inizializza lo studente ===
     student = Student(username)  # Gestisce creazione/lettura chiavi in automatico
@@ -34,10 +33,10 @@ if __name__ == "__main__":
         print("Errore nella risoluzione del DID:", e)
         exit(1)
 
-    # === Associa DID allo studente se mancante ===
+    # === Associa DID al profilo dello studente se mancante ===
     if not authenticated_user.get("did"):
         print("Associando DID allo studente...")
-        update_success = user_manager.update_user_did(user_id, did_web)
+        update_success = user_manager.update_user_did(authenticated_user["id"], did_web)
         if update_success:
             print("DID associato correttamente al profilo dello studente.")
         else:

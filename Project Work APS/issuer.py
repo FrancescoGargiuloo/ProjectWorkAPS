@@ -16,16 +16,15 @@ UNIVERSITY_PRIVATE_KEY_PATH = "university_private_key.pem"
 class UniversityIssuer:
     """Gestisce l'emissione e la verifica di credenziali verificabili"""
 
-    def __init__(self, issuer_did, key_path=None):
+    def __init__(self, issuer_did):
         """
         Inizializza l'issuer con il suo DID
 
         Args:
             issuer_did (str): Il DID dell'emittente (l'università)
-            key_path (str, optional): Percorso al file .pem della chiave privata
         """
         self.issuer_did = issuer_did
-        self._private_key_path = key_path or UNIVERSITY_PRIVATE_KEY_PATH
+        self._private_key_path = UNIVERSITY_PRIVATE_KEY_PATH
 
         # Se il file della chiave privata non esiste, ne generiamo uno nuovo
         if not os.path.exists(self._private_key_path):
@@ -46,7 +45,7 @@ class UniversityIssuer:
         pem = private_key.private_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.NoEncryption()  # In produzione usare BestAvailableEncryption
+            encryption_algorithm=serialization.NoEncryption()  # Stiamo ipotizzando di salvare i .pem in chiaro
         )
 
         # Crea la directory se non esiste
@@ -64,7 +63,7 @@ class UniversityIssuer:
             with open(self._private_key_path, 'rb') as key_file:
                 private_key = serialization.load_pem_private_key(
                     key_file.read(),
-                    password=None  # In produzione utilizzare una password
+                    password=None  # no password per accedere al file
                 )
             return private_key
         except Exception as e:
@@ -83,9 +82,9 @@ class UniversityIssuer:
         if isinstance(data, dict):
             data = json.dumps(data, sort_keys=True)
 
-        # Firma i dati con RSA (usa 'data' già serializzato, non str(data))
+        # Firma i dati con RSA
         signature = private_key.sign(
-            data.encode(),  # ← Cambiato qui
+            data.encode(),
             padding.PSS(
                 mgf=padding.MGF1(hashes.SHA256()),
                 salt_length=padding.PSS.MAX_LENGTH
@@ -211,26 +210,37 @@ class UniversityIssuer:
             else:
                 return {"status": "error", "message": "Firma del challenge non valida"}
         else:
-            # Simulazione della verifica per compatibilità retroattiva
-            # Rimuovi il challenge dopo l'uso
-            self.challenges.pop(student_did)
-            return {"status": "ok", "message": "Challenge verificato con successo (simulazione)"}
+            return {"status": "error", "message": "Chiave pubblica mancante: impossibile verificare la firma"}
 
-    def accept_application(self, application_data, signature, student_public_key_pem=None):
+    def accept_application(self, application_data, signature, student_public_key_pem):
         """
-        Accetta una candidatura Erasmus firmata dallo studente
-        """
-        # Se viene fornita la chiave pubblica, verifica effettivamente la firma
-        if student_public_key_pem:
-            # Passa direttamente il dizionario, non serializzarlo qui
-            if not self.verify_signature(student_public_key_pem, application_data, signature):
-                return {
-                    "status": "rejected",
-                    "message": "Firma della candidatura non valida",
-                    "timestamp": datetime.now().isoformat()
-                }
+        Accetta una candidatura Erasmus firmata dallo studente.
 
-        # Se la verifica è andata a buon fine o non è stata richiesta, accetta la candidatura
+        Args:
+            application_data (dict): Dati della candidatura.
+            signature (str): Firma della candidatura.
+            student_public_key_pem (str): Chiave pubblica dello studente in formato PEM, già risolta dal chiamante.
+
+        Returns:
+            dict: Risultato dell'accettazione.
+        """
+        # Verifica che la chiave pubblica sia stata fornita
+        if not student_public_key_pem: # si potrebbe togliere dato che sei sicuro di passargliela
+            return {
+                "status": "rejected",
+                "message": "Chiave pubblica dello studente mancante: impossibile verificare la firma",
+                "timestamp": datetime.now().isoformat()
+            }
+
+        # Verifica la firma della candidatura
+        if not self.verify_signature(student_public_key_pem, application_data, signature):
+            return {
+                "status": "rejected",
+                "message": "Firma della candidatura non valida",
+                "timestamp": datetime.now().isoformat()
+            }
+
+        # Firma valida: accetta la candidatura
         return {
             "status": "accepted",
             "message": "Candidatura accettata con successo",

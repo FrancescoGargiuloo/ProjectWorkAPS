@@ -11,8 +11,7 @@ from cryptography.hazmat.primitives.asymmetric import padding
 
 
 class Student:
-    def __init__(self, username, public_key_path="rsa_pub.key"):#togliere la key come percorso e dare allo studente il did
-        # piuttosto che passarlo da main
+    def __init__(self, username):
         """
         Inizializza uno studente con username e password
 
@@ -23,9 +22,9 @@ class Student:
             public_key_path (str, optional): Percorso al file della chiave pubblica
         """
         self.username = username
-        self.did = ""
+        self.did = "" # teoricamente lo studente ha il did già associato
         self._private_key_path = "rsa_priv.key"
-        self._public_key_path = public_key_path
+        self._public_key_path = "rsa_pub.key"
 
         # Se non viene fornito un percorso alla chiave, ne generiamo una nuova e la salviamo
         if not os.path.exists(self._private_key_path):
@@ -39,7 +38,8 @@ class Student:
             public_exponent=65537,
             key_size=2048
         )
-
+        # bisognerebbe però nel caso di una chiave privata o pubblica non disponibile
+        # di generare entrambi le chiavi, altrimenti non funzioneraà mai la enc e la dec, da aggiustare
         # Serializza la chiave privata in formato PEM
         pem = private_key.private_bytes(
             encoding=serialization.Encoding.PEM,
@@ -107,7 +107,8 @@ class Student:
             str: Chiave pubblica in formato PEM
         """
         try:
-            # Controlla se il file della chiave pubblica esiste
+            # Controlla se il file della chiave pubblica esiste, questo controllo
+            # se fatto a monte del codice nell'init non ha senso
             if os.path.exists(self._public_key_path):
                 # Legge la chiave pubblica dal file
                 with open(self._public_key_path, 'rb') as key_file:
