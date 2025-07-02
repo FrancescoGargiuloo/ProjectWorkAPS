@@ -59,6 +59,9 @@ class University:
         with open(self.pub_path, "rb") as f:
             pub_pem = f.read().decode()
 
+        filename = self.did.split(":")[-1].replace(".", "_") + "_did.json"
+        path = os.path.join(DID_FOLDER, filename)
+
         os.makedirs(DID_FOLDER, exist_ok=True)
         did_doc = {
             "@context": "https://www.w3.org/ns/did/v1",
@@ -71,8 +74,17 @@ class University:
             }]
         }
 
-        with open(DID_PATH, "w") as f:
+        with open(path, "w") as f:
             json.dump(did_doc, f, indent=2)
+
+           
+    def resolve_did(self, did: str) -> dict:
+        filename = did.split(":")[-1].replace(".", "_") + "_did.json"
+        path = os.path.join(DID_FOLDER, filename)
+        if not os.path.exists(path):
+            raise Exception(f"DID document non trovato per {did}")
+        with open(path, "r") as f:
+            return json.load(f)
 
     # === INTERFACCIA PUBBLICA ===
 
@@ -172,9 +184,7 @@ class University:
     def generate_erasmus_credential(self, student):
         """
         Genera una credenziale Erasmus per uno studente.
-        :param student: Oggetto studente contenente i dati necessari
-        :return: Nessun valore di ritorno, la credenziale viene salvata su file.
-
+        La firma è calcolata solo sui dati principali della credenziale (escludendo proof e evidence).
         """
         issuance_date = datetime.utcnow().isoformat() + "Z"
         expiration_date = (datetime.utcnow() + timedelta(days=365)).isoformat() + "Z"
@@ -185,7 +195,7 @@ class University:
         revocation_list_id = self.revocation_registry.generate_list_id(revocation_namespace, category_id)
         revocation_key = self.revocation_registry.generate_revocation_key(credential_id)
 
-        credential = {
+        credential_data = {
             "@context": [
                 "https://www.w3.org/2018/credentials/v1",
                 "https://consorzio-universita.example/credentials/v1"
@@ -210,46 +220,38 @@ class University:
                 "namespace": revocation_namespace,
                 "revocationList": revocation_list_id,
                 "revocationKey": revocation_key
-            },
-            "proof": {},
-            "evidence": {}
+            }
         }
-
-        # Firma della credenziale
         priv_key = serialization.load_pem_private_key(open(self.priv_path, "rb").read(), password=None)
-        jws_signature = base64.b64encode(priv_key.sign(
-            json.dumps(credential, sort_keys=True).encode(),
+        signature = base64.b64encode(priv_key.sign(
+            json.dumps(credential_data, sort_keys=True).encode(),
             padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH),
             hashes.SHA256()
         )).decode()
 
-        credential["proof"] = {
+        credential_data["proof"] = {
             "type": "RsaSignature2023",
             "created": issuance_date,
             "proofPurpose": "assertionMethod",
             "verificationMethod": f"{self.did}#key-1",
-            "jws": jws_signature
+            "jws": signature
         }
-
-        tx_hash = self.blockchain.add_block(credential)
-
-        credential["evidence"] = {
+        tx_hash = self.blockchain.add_block(credential_data)
+        credential_data["evidence"] = {
             "type": "BlockchainRecord",
             "description": "Hash della credenziale ancorato su blockchain",
             "transactionHash": tx_hash,
             "network": "ConsorzioReteUniversitaria"
         }
-
         self.revocation_registry.create_revocation_entry(
             namespace=revocation_namespace,
             list_id=revocation_list_id,
             key=revocation_key
         )
 
-        # Salva la credenziale su file
         filename = f"{student.username}_erasmus_credential.json"
         filepath = os.path.join(CREDENTIAL_FOLDER, filename)
         with open(filepath, "w") as f:
-            json.dump(credential, f, indent=2)
+            json.dump(credential_data, f, indent=2)
 
         print(f"Credenziale Erasmus salvata")

@@ -1,8 +1,11 @@
 from Student import Student
 from University import University
 import uuid
-import json
+import json, os
+from UniversityRennes import UniversityRennes
 
+BASE_DIR = os.path.dirname(__file__)
+CRED_FOLDER = os.path.join(BASE_DIR, "credential")
 def pre_game():
     print("==== [ SETUP UNIVERSITÀ ] ====")
     university = University()
@@ -80,5 +83,78 @@ def pre_game():
         else:
             print("Opzione non valida.")
 
+
+def load_erasmus_credential(username):
+    path = os.path.join(CRED_FOLDER, f"{username}_erasmus_credential.json")
+    try:
+        with open(path, "r") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        print("❌ Erasmus Credential non trovata.")
+        return None
+
+def collect_exam_data():
+    exams = []
+    print("\nInserisci gli esami superati. Premi ENTER senza nome per terminare.")
+    while True:
+        name = input("Nome esame: ").strip()
+        if not name:
+            break
+        exam = {
+            "examId": input("ID esame: ").strip(),
+            "name": name,
+            "credits": int(input("Crediti: ").strip()),
+            "grade": int(input("Voto: ").strip()),
+            "date": input("Data (YYYY-MM-DD): ").strip()
+        }
+        exams.append(exam)
+        print("✔️ Esame aggiunto.")
+    return exams
+
+def rennes():
+    print("==== [ UNIVERSITÉ DE RENNES ] ====")
+    university = UniversityRennes()
+
+    username = input("Username studente: ").strip()
+    first_name = input("Nome: ").strip()
+    last_name = input("Cognome: ").strip()
+    did = f"did:web:{username}.localhost"
+
+    student = Student(username=username, password="*", first_name=first_name, last_name=last_name)
+    student.did = did  # Forziamo il DID per simulare
+
+    # 1. Carica Erasmus Credential
+    erasmus_cred = load_erasmus_credential(username)
+    if not erasmus_cred:
+        return
+
+    # 2. Verifica firma Erasmus VC
+    if not university.verify_erasmus_credential(erasmus_cred):
+        print("❌ Erasmus Credential NON valida.")
+        return
+
+    print("✅ Erasmus Credential verificata con successo.")
+
+    # 3. Inserimento esami e generazione Academic VC
+    exams = collect_exam_data()
+    if not exams:
+        print("⚠️ Nessun esame inserito.")
+        return
+
+    university.generate_academic_credential(student, exams)
 if __name__ == "__main__":
     pre_game()
+    print("\n==== FASE PRE GAME COMPLETATA ====")
+    print("LO STUDENTE SI PRESENTA ALL'UNIVERSITà OSPITANTE E COMPLETA IL PERCORSO DI STUDIO")
+    while True:
+        print("\n==== [ MENU ] ====")
+        print("1. Esci")
+        print("2. Richiedi Attestazione Voti")
+        choice = input("Seleziona un'opzione: ").strip()
+
+        if choice == "1":
+            break
+        elif choice == "2":
+            rennes()
+        else:
+            print("Opzione non valida.")

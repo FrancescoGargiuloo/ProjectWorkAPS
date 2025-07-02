@@ -1,0 +1,12 @@
+{
+  "@context": "https://www.w3.org/ns/did/v1",
+  "id": "did:web:rennes.it",
+  "verificationMethod": [
+    {
+      "id": "did:web:rennes.it#key-1",
+      "type": "RsaVerificationKey2018",
+      "controller": "did:web:rennes.it",
+      "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA08RgUxXejqmCxHUB6tFu\nCeth202orGc+HXkhogwpfs2sEjaM6j45vOOzywnOrakxF6ylc8/1jJzZ2J3NTsG4\n3fCO5/YyebuRCf/izlyzsCR1GLJQyyIPFeHcl0O23V/H2okRPo2ZGuOnqkEtRaMD\npnkx6HALTvq9aJSquFmCnbUjA/i5iOaiIll+uteL82QKeLwJ0rNyUWGm6ouBSaKR\npcAL9l//Dqj4n28ATWiC2UyPgPC9e//smEvdfXDF2Ka41U3eMD7n3kfiAqmw15Z3\nA+MRCaVpPc99KsWoXKsUxzuikKCEALArWVFttG8YxaeDtSRTE/mMPk4gpHbXkIRj\nmQIDAQAB\n-----END PUBLIC KEY-----\n"
+    }
+  ]
+}

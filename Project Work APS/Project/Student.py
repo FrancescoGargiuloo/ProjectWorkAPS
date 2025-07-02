@@ -68,8 +68,9 @@ class Student:
                 "publicKeyPem": self.get_public_key()
             }]
         }
-        os.makedirs("data", exist_ok=True)
-        with open(DID_PATH, "w") as f:
+        filename = self.did.split(":")[-1].replace(".", "_") + "_did.json"
+        path = os.path.join(DID_FOLDER, filename)
+        with open(path, "w") as f:
             json.dump(did_doc, f, indent=2)
 
     def sign(self, message: str) -> str:
