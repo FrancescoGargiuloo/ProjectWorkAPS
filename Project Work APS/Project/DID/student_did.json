@@ -1,0 +1,12 @@
+{
+  "@context": "https://www.w3.org/ns/did/v1",
+  "id": "did:web:luca.localhost",
+  "verificationMethod": [
+    {
+      "id": "did:web:luca.localhost#key-1",
+      "type": "RsaVerificationKey2018",
+      "controller": "did:web:luca.localhost",
+      "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4NHrwArkhLL0HX8ONaLz\nyznjvJaOTyzRR3LsAsficCYvfJ+LLJs79hzE3in+9AqVZHJkORo71jhoQaDLW82o\nX+QPo8VK5Qmcwg0J+eJKFYbmC0x6tlqOsolrdlVJyfQvkBrGW2PYzWQY543N0ciY\nznJE/ewpRTI0aghzw9U8ywWGCr0KUcp1++2VlJoiP9PSIYWEhdQoTQWlCmuDITs7\nP3nQRZpgjak+usARPGlTf/h1PjtZk6QP/1OmXuHk9OImS3G8ygTqm9d6En5X+sMX\nPcRYov++p6pMhAAQQZqRVsY77CQg4DRfxoxGgrrnpo0r42NZjny9AV7ZmO4KPKHy\n1wIDAQAB\n-----END PUBLIC KEY-----\n"
+    }
+  ]
+}
