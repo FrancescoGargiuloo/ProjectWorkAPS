@@ -7,7 +7,7 @@ from UniversityRennes import UniversityRennes
 BASE_DIR = os.path.dirname(__file__)
 CRED_FOLDER = os.path.join(BASE_DIR, "credential")
 def pre_game():
-    print("==== [ SETUP UNIVERSITÀ ] ====")
+    print("==== [ UNIVERSITÀ ] ====")
     university = University()
 
     print("\n==== [ LOGIN O REGISTRAZIONE STUDENTE ] ====")
