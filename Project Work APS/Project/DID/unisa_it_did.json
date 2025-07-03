@@ -6,7 +6,7 @@
       "id": "did:web:unisa.it#key-1",
       "type": "RsaVerificationKey2018",
       "controller": "did:web:unisa.it",
-      "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuQgRxpxT1WxX/jLZ4WN2\nl8OxbaOb57+L3VGS0G6mZR5iY+Bj5SAzGyxCyZnh2NE9BZGjqPQchtDb6/EP1d85\nH5Fzd+QiaEt7d3Q6xkdp6O2ZUJj1arumF1/tZSnYEmqjzskUG3mMQRJ5xRUvYSG7\nlSGCYsvQkaOWCJ7e5lf0zEjOwz8Aus3vq1aKOErx3uM2YjLH1vAMvvoEfWzJy1wz\naVPpOhGNjNrHa++o1Ze1MQg+wbvWmRiG+jGGa5IgfZ7KH5162TYwhBnJyx/c+BcR\nmZ/oF63RvKUcg0a9KB8Ai1QOIT/RXs5VuV0C9eJwq5jyY7qg97rlcZd/iDScCHRX\npwIDAQAB\n-----END PUBLIC KEY-----\n"
+      "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApfH0yxqXyXPjJJK/yyfG\nImeGRHwPxVM2ElvFO3YOB3Ui4uOz+gKzzeTKutofWMsu0+Gc1mnCVPZ+9RQVxL1L\nUmJg3dWkKu/IqKx3S3nPOljLKMuHTErUW5ITRFN9zRWe6RaXjNF6/jgWEZo3Dzfm\ny33o3uVo5qpf6KRyDsmgAmYTTJP3vv5qn8D4pGF1NxO4uzCUOHxuIs0dQrFUIUv9\nDoTqDxRA/0eL5jYlTGuWmQuyKLlXXSiuMuJQRAgM2wZZ4Z6KkKoKgMUDnN0Z81eI\noV/WEgIPdii62zxQX7dPOOqULzR+eug/79/zcJ3HXdWIXZFdLdNJ3nLmlvF/roqX\nSwIDAQAB\n-----END PUBLIC KEY-----\n"
     }
   ]
 }

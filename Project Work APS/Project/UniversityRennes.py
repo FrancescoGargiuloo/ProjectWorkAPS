@@ -83,12 +83,15 @@ class UniversityRennes:
         proof = credential.get("proof", {})
         jws = proof.get("jws")
         verification_method = proof.get("verificationMethod")
-
+        status = credential.get("credentialStatus", {})
+        
+        # 1. Verifica che il DID sia trusted
         if issuer_did not in self.get_trusted_dids():
-            print("❌ DID emittente non trusted.")
+            print("❌ DID emittente non è nella lista trusted.")
             return False
 
         try:
+            # 2. Verifica della firma
             did_doc = self.resolve_did(issuer_did)
             pub_key_pem = None
             for vm in did_doc.get("verificationMethod", []):
@@ -102,12 +105,10 @@ class UniversityRennes:
 
             public_key = serialization.load_pem_public_key(pub_key_pem.encode())
 
-            # Rimuovi proof ed evidence prima di verificare
-            unsigned_credential = credential.copy()
-            unsigned_credential.pop("proof", None)
-            unsigned_credential.pop("evidence", None)
-
-            payload = json.dumps(unsigned_credential, sort_keys=True).encode()
+            unsigned_cred = credential.copy()
+            unsigned_cred.pop("proof", None)
+            unsigned_cred.pop("evidence", None)
+            payload = json.dumps(unsigned_cred, sort_keys=True).encode()
 
             public_key.verify(
                 base64.b64decode(jws),
@@ -119,7 +120,22 @@ class UniversityRennes:
                 hashes.SHA256()
             )
             print("✅ Firma valida.")
-            return True
+
+            # 3. Verifica stato di revoca
+            namespace = status.get("namespace")
+            revocation_list = status.get("revocationList")
+            revocation_key = status.get("revocationKey")
+
+            is_revoked = self.revocation_registry.is_revoked(namespace, revocation_list, revocation_key)
+            if is_revoked is None:
+                print("⚠️ Stato di revoca non trovato. Credenziale potenzialmente non valida.")
+                return False
+            elif is_revoked:
+                print("❌ Credenziale revocata.")
+                return False
+            else:
+                print("✅ Credenziale NON revocata.")
+                return True
 
         except InvalidSignature:
             print("❌ Firma non valida.")
@@ -128,12 +144,6 @@ class UniversityRennes:
             print(f"❌ Errore nella verifica: {e}")
             return False
 
-        except InvalidSignature:
-            print("❌ Firma non valida.")
-            return False
-        except Exception as e:
-            print(f"❌ Errore nella verifica: {e}")
-            return False
 
     def get_trusted_dids(self):
         return ["did:web:unisa.it"]
@@ -152,7 +162,7 @@ class UniversityRennes:
             hashes.SHA256()
         )).decode()
 
-        tx_hash = self.blockchain.add_block({"merkleRoot": root, "student": student.did})
+        tx_hash = self.blockchain.add_block({"merkleRoot": root, "student": self.did})
 
         credential = {
             "@context": [
@@ -176,10 +186,10 @@ class UniversityRennes:
             "credentialStatus": {
                 "id": f"https://consorzio-univ.it/creds/{student.username}-academic-status",
                 "type": "ConsortiumRevocationRegistry2024",
-                "registry": "0xABCDEF1234567890ABCDEF1234567890ABCDEF12",
+                "registry": "0xRegistryAddresRennes",
                 "namespace": "0x9876543210FEDCBA09876543210FEDCBA0987654",
                 "revocationList": "0x456789ABCDEF456789ABCDEF456789ABCDEF1234",
-                "revocationKey": hashlib.sha256(credential_id.encode()).hexdigest()
+                "revocationKey": self.revocation_registry.generate_revocation_key(credential_id)
             },
             "evidence": {
                 "type": "BlockchainRecord",

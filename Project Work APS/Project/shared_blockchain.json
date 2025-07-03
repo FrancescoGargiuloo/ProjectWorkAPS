@@ -1,0 +1,47 @@
+[
+  {
+    "index": 0,
+    "timestamp": "2025-07-03T12:59:34.051622",
+    "data": {
+      "message": "Genesis Block"
+    },
+    "previous_hash": "0",
+    "hash": "f86d4260283c6846488c3b6bd2aa67f2ea256ec121fef059714238052eb9cda8"
+  },
+  {
+    "index": 1,
+    "timestamp": "2025-07-03T12:59:49.196802",
+    "data": {
+      "credentialHash": "e95aee160739445b60a155faba710612a8b0bf7207f8d0a624dce1eedabc980d",
+      "type": "EligibilityCredential",
+      "studentDID": "did:web:marco.localhost",
+      "issuer": "did:web:unisa.it"
+    },
+    "previous_hash": "f86d4260283c6846488c3b6bd2aa67f2ea256ec121fef059714238052eb9cda8",
+    "hash": "8830452aacfd70ccf0c04e250d2274c1b0a0104a6a807c6d0d773aa6f0e3b668"
+  },
+  {
+    "index": 2,
+    "timestamp": "2025-07-03T13:02:35.596982",
+    "data": {
+      "credentialHash": "d9723557ccc391c5aee9db83914455e18d9ada1a3ce776a57b4fa071cac69d64",
+      "type": "EligibilityCredential",
+      "studentDID": "did:web:marco.localhost",
+      "issuer": "did:web:unisa.it"
+    },
+    "previous_hash": "8830452aacfd70ccf0c04e250d2274c1b0a0104a6a807c6d0d773aa6f0e3b668",
+    "hash": "3a7ffa1a2454c17a83101ad79bd85a2ceff426765a5540ce062d7da6da9eace4"
+  },
+  {
+    "index": 3,
+    "timestamp": "2025-07-03T13:05:44.180079",
+    "data": {
+      "credentialHash": "f868d8817d3f9b8a29b7a6037adc0438317d2b96863c8523f5d714f8acecffe1",
+      "type": "EligibilityCredential",
+      "studentDID": "did:web:marco.localhost",
+      "issuer": "did:web:unisa.it"
+    },
+    "previous_hash": "3a7ffa1a2454c17a83101ad79bd85a2ceff426765a5540ce062d7da6da9eace4",
+    "hash": "237615b3bf5a599919bb3f6b668405265429130402104b6a96340a8d6e03d48e"
+  }
+]

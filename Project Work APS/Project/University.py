@@ -6,7 +6,7 @@ from cryptography.exceptions import InvalidSignature
 from Database import UserManager
 from Blockchain import Blockchain
 from RevocationRegistry import RevocationRegistry
-
+import hashlib
 BASE_DIR = os.path.dirname(__file__)
 KEYS_FOLDER = os.path.join(BASE_DIR, "keys")
 DID_FOLDER = os.path.join(BASE_DIR, "DID")
@@ -216,12 +216,13 @@ class University:
             "credentialStatus": {
                 "id": f"https://unisa.it/status/{revocation_list_id}",
                 "type": "ConsortiumRevocationRegistry2024",
-                "registry": "0xRegistryAddressFinto",
+                "registry": "0xRegistryAddressUnisa",
                 "namespace": revocation_namespace,
                 "revocationList": revocation_list_id,
                 "revocationKey": revocation_key
             }
         }
+        # Firma della credenziale (senza proof/evidence)
         priv_key = serialization.load_pem_private_key(open(self.priv_path, "rb").read(), password=None)
         signature = base64.b64encode(priv_key.sign(
             json.dumps(credential_data, sort_keys=True).encode(),
@@ -229,6 +230,7 @@ class University:
             hashes.SHA256()
         )).decode()
 
+        # Aggiunta della proof
         credential_data["proof"] = {
             "type": "RsaSignature2023",
             "created": issuance_date,
@@ -236,7 +238,19 @@ class University:
             "verificationMethod": f"{self.did}#key-1",
             "jws": signature
         }
-        tx_hash = self.blockchain.add_block(credential_data)
+
+        # Calcolo hash della VC con proof (senza evidence)
+        vc_hash = hashlib.sha256(json.dumps(credential_data, sort_keys=True).encode()).hexdigest()
+
+        # Aggiungi l'hash alla blockchain
+        tx_hash = self.blockchain.add_block({
+            "credentialHash": vc_hash,
+            "type": "EligibilityCredential",
+            "studentDID": student.did,
+            "issuer": self.did
+        })
+
+        # Aggiungo evidence
         credential_data["evidence"] = {
             "type": "BlockchainRecord",
             "description": "Hash della credenziale ancorato su blockchain",
@@ -246,7 +260,7 @@ class University:
         self.revocation_registry.create_revocation_entry(
             namespace=revocation_namespace,
             list_id=revocation_list_id,
-            key=revocation_key
+            revocation_key=revocation_key
         )
 
         filename = f"{student.username}_erasmus_credential.json"
