@@ -26,7 +26,7 @@ class UniversityRennes:
         self.did = did
         self.priv_path = os.path.join(KEYS_FOLDER, "rennes_priv.pem")
         self.pub_path = os.path.join(KEYS_FOLDER, "rennes_pub.pem")
-
+        #self.user_manager = UserManager()
         self.blockchain = Blockchain()
         self.revocation_registry = RevocationRegistry()
 
@@ -161,7 +161,7 @@ class UniversityRennes:
             padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH),
             hashes.SHA256()
         )).decode()
-
+        # capire se la root va firmata o meno!!!!!!!!
         tx_hash = self.blockchain.add_block({"merkleRoot": root, "student": self.did})
 
         credential = {
@@ -211,3 +211,36 @@ class UniversityRennes:
             json.dump(credential, f, indent=2)
 
         print(f"🎓 Academic Credential emessa e salvata: {filepath}")
+
+    def collect_exam_data(self, file_path="exams.json"):
+        """
+        Carica i dati degli esami da un file JSON.
+
+        Args:
+            file_path (str): Il percorso del file JSON da cui caricare i dati.
+
+        Returns:
+            list: Una lista di dizionari, ognuno rappresentante un esame.
+                  Ritorna una lista vuota se il file non esiste o è vuoto/non valido.
+        """
+        if not os.path.exists(file_path):
+            print(f"⚠️ Il file {file_path} non trovato. Restituisco lista esami vuota.")
+            return []
+
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                if "exams" in data and isinstance(data["exams"], list):
+                    print(f"✔️ Esami caricati con successo da {file_path}.")
+                    return data["exams"]
+                else:
+                    print(
+                        f"⚠️ Formato JSON non valido in {file_path}: 'exams' key non trovata o non è una lista. Restituisco lista vuota.")
+                    return []
+        except json.JSONDecodeError as e:
+            print(f"❌ Errore durante il parsing del file JSON {file_path}: {e}. Restituisco lista vuota.")
+            return []
+        except Exception as e:
+            print(
+                f"❌ Si è verificato un errore inaspettato durante la lettura del file {file_path}: {e}. Restituisco lista vuota.")
+            return []

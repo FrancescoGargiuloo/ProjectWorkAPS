@@ -1,0 +1,12 @@
+{
+  "@context": "https://www.w3.org/ns/did/v1",
+  "id": "did:web:mari.localhost",
+  "verificationMethod": [
+    {
+      "id": "did:web:mari.localhost#key-1",
+      "type": "RsaVerificationKey2018",
+      "controller": "did:web:mari.localhost",
+      "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwn+TuCCgITEOb9GVaW5C\n6EVd46v3AZYEIT3hlkh6WAQJk8ca1neASQbm7+SB/H8M26+/Kqx3ZAcK5GoW6HW/\nUdBIJwSDzpcIILKY6t9HFUQKAIR6BINr/aEPlr3CbmqaL7Z1EhqOzjDSCAnUO8fb\nS3t1tX1ngKE3cuymd/rhodTq26Y0b246kraSRv4qtfr8+N0dmTShlOLrCXhrDaPI\n4XWjFlZUxJrf0ktQ1Y3Up0k/QwaKkOWh4CtIjAWSFvVDybDG46z+txM0+lkLOW0/\nDJg2xIaVMxb8KDkPXlZeZ/hyUFnLWe9XfAXrBoYnkRCZs0gl21bAhbvr+egyAs/W\nAwIDAQAB\n-----END PUBLIC KEY-----\n"
+    }
+  ]
+}

@@ -3,24 +3,27 @@ from datetime import datetime, timedelta
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.exceptions import InvalidSignature
-from Database import UserManager
+from Database import UserManager  # Assicurati che UserManager gestisca public_key_pem
 from Blockchain import Blockchain
 from RevocationRegistry import RevocationRegistry
 import hashlib
+
 BASE_DIR = os.path.dirname(__file__)
 KEYS_FOLDER = os.path.join(BASE_DIR, "keys")
 DID_FOLDER = os.path.join(BASE_DIR, "DID")
 DID_PATH = os.path.join(DID_FOLDER, "university_did.json")
 CREDENTIAL_FOLDER = os.path.join(BASE_DIR, "credential")
 
+
 class University:
     def __init__(self, did="did:web:unisa.it"):
         self.did = did
         self.priv_path = os.path.join(KEYS_FOLDER, "university_priv.pem")
         self.pub_path = os.path.join(KEYS_FOLDER, "university_pub.pem")
-        self.user_manager = UserManager()
+        self.user_manager = UserManager()  # Istanzia il UserManager
         self.blockchain = Blockchain()
         self.revocation_registry = RevocationRegistry()
+        self._challenges = {}  # Inizializza il dizionario dei challenge
 
         if not os.path.exists(self.priv_path):
             self._generate_keypair()
@@ -31,7 +34,6 @@ class University:
         Genera una coppia di chiavi RSA e le salva in formato PEM.
         Se le chiavi esistono già, non fa nulla.
         :return: None
-
         """
         private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
         os.makedirs(KEYS_FOLDER, exist_ok=True)
@@ -54,7 +56,6 @@ class University:
         Aggiorna il documento DID dell'università con la chiave pubblica.
         Se il file non esiste, lo crea con la chiave pubblica generata.
         :return: None
-
         """
         with open(self.pub_path, "rb") as f:
             pub_pem = f.read().decode()
@@ -77,7 +78,6 @@ class University:
         with open(path, "w") as f:
             json.dump(did_doc, f, indent=2)
 
-           
     def resolve_did(self, did: str) -> dict:
         filename = did.split(":")[-1].replace(".", "_") + "_did.json"
         path = os.path.join(DID_FOLDER, filename)
@@ -88,82 +88,110 @@ class University:
 
     # === INTERFACCIA PUBBLICA ===
 
-    def register_student(self, user_id, username, password, first_name, last_name):
+    def register_student(self, user_id, username, password, first_name, last_name, public_key_pem):
         """
-        Registra un nuovo studente.
-        :param user_id: ID dell'utente studente
-        :param username: Nome utente dello studente
-        :param password: Password dello studente
-        :param first_name: Nome dello studente
-        :param last_name: Cognome dello studente
-        :return: Risultato della registrazione come dizionario con status e messaggio
-
+        Registra un nuovo studente nel DB dell'università, includendo la chiave pubblica.
+        :param user_id: ID univoco dello studente.
+        :param username: Username dello studente.
+        :param password: Password dello studente.
+        :param first_name: Nome dello studente.
+        :param last_name: Cognome dello studente.
+        :param public_key_pem: Chiave pubblica PEM dello studente.
+        :return: True se la registrazione e l'aggiornamento avvengono con successo, False altrimenti.
         """
-        return self.user_manager.first_login(user_id, username, password, first_name, last_name)
+        # La registrazione iniziale con first_login non include DID e public_key_pem
+        # Lo user_manager gestisce la creazione dell'utente base
+        success = self.user_manager.first_login(user_id, username, password, first_name, last_name)
+        if success:
+            # Dopo la creazione dell'utente, aggiorniamo il suo DID e la sua chiave pubblica
+            # (Il DID sarà assegnato dalla Student class nel main, per ora lo lasciamo vuoto o un placeholder)
+            return self.user_manager.update_user_did_and_public_key(user_id, "", public_key_pem)  # DID vuoto per ora
+        return False
 
     def authenticate_student(self, username, password):
         """
         Autentica uno studente con username e password.
         :param username: Nome utente dello studente
         :param password: Password dello studente
-        :return: Risultato dell'autenticazione come dizionario con status e messaggio
-
+        :return: Dati dell'utente (incluso 'id', 'did', 'public_key_pem' se presenti) se l'autenticazione ha successo, altrimenti None.
         """
         return self.user_manager.authenticate_user(username, password)
 
-    def assign_did_to_student(self, user_id, new_did):
+    def assign_did_to_student(self, user_id, new_did, public_key_pem):  # Aggiunto public_key_pem
         """
-        Assegna un nuovo DID a uno studente.
+        Assegna un nuovo DID e la chiave pubblica a uno studente esistente.
         :param user_id: ID dell'utente studente
         :param new_did: Nuovo DID da assegnare
-        :return: Risultato dell'operazione come dizionario con status e messaggio
-
+        :param public_key_pem: Chiave pubblica PEM dello studente
+        :return: True se l'aggiornamento ha avuto successo, False altrimenti
         """
-        return self.user_manager.update_user_did(user_id, new_did)
+        # Questo metodo ora chiamerà il manager per aggiornare sia DID che chiave pubblica
+        return self.user_manager.update_user_did_and_public_key(user_id, new_did, public_key_pem)
 
     def get_user_by_did(self, did):
         """
         Recupera un utente in base al suo DID.
         :param did: DID dell'utente
         :return: Un oggetto utente se trovato, altrimenti None
-
         """
         return self.user_manager.get_user_by_did(did)
 
     # === CHALLENGE-RESPONSE ===
 
-    def generate_challenge(self, student_did):
+    def generate_challenge(self, user_id: str) -> str:
         """
-        Genera una challenge per uno studente identificato dal suo DID.
-        :param student_did: DID dello studente
-        :return: Una stringa che rappresenta la challenge generata
+        Genera una challenge per uno studente autenticato tramite il suo user_id.
+        Il DID dello studente viene recuperato dal DB dell'università.
+        :param user_id: ID dell'utente studente (autenticato)
+        :return: Una stringa che rappresenta la challenge generata, o None se il DID non è trovato.
+        """
+        user_data = self.user_manager.get_user_by_id(user_id)
+        if not user_data or not user_data.get("did"):
+            print(f"Errore in generate_challenge: DID non trovato per l'utente con ID {user_id}")
+            return None  # O sollevare un'eccezione
 
-        """
-        challenge = ''.join(random.choices(string.ascii_letters + string.digits, k=32))
-        if not hasattr(self, "_challenges"):
-            self._challenges = {}
-        self._challenges[student_did] = {
-            "value": challenge,
+        student_did = user_data["did"]  # Recupera il DID dal DB dell'università
+        challenge_value = ''.join(random.choices(string.ascii_letters + string.digits, k=32))
+        self._challenges[student_did] = {  # Il challenge è associato al DID
+            "value": challenge_value,
             "expires_at": datetime.now() + timedelta(minutes=5)
         }
-        return challenge
+        return challenge_value
 
-    def verify_challenge_response(self, student_did, signature_b64, student_public_key_pem):
+    def verify_challenge_response(self, user_id: str, signature_b64: str):
         """
         Verifica la risposta a una challenge generata per uno studente.
-        :param student_did: DID dello studente
-        :param signature_b64: Firma in base64 della challenge
-        :param student_public_key_pem: Chiave pubblica dello studente in formato PEM
-        :return: Risultato della verifica come dizionario con status e messaggio
+        Recupera il DID e la chiave pubblica dello studente dal DB dell'università
+        usando il user_id autenticato.
 
+        :param user_id: ID dell'utente studente (autenticato)
+        :param signature_b64: Firma in base64 della challenge inviata dallo studente
+        :return: Risultato della verifica come dizionario con status e messaggio
         """
+        # 1. Recupera i dati dello studente dal DB dell'università usando l'user_id
+        user_data = self.user_manager.get_user_by_id(user_id)
+        if not user_data:
+            return {"status": "error", "message": f"Utente con ID {user_id} non trovato nel DB dell'università."}
+
+        student_did = user_data.get("did")
+        if not student_did:
+            return {"status": "error", "message": f"DID non assegnato all'utente con ID {user_id} nel DB."}
+
+        student_public_key_pem = user_data.get("public_key_pem")
+        if not student_public_key_pem:
+            return {"status": "error", "message": f"Chiave pubblica non trovata per il DID: {student_did} nel DB."}
+
+        # 2. Recupera il challenge associato a questo DID
         challenge_data = self._challenges.get(student_did)
         if not challenge_data:
-            return {"status": "error", "message": "Nessun challenge trovato"}
+            return {"status": "error", "message": "Nessun challenge attivo trovato per questo DID."}
 
+        # 3. Controlla la scadenza del challenge
         if datetime.now() > challenge_data["expires_at"]:
-            return {"status": "error", "message": "Challenge scaduto"}
+            del self._challenges[student_did]  # Rimuovi il challenge scaduto
+            return {"status": "error", "message": "Challenge scaduto."}
 
+        # 4. Verifica la firma
         try:
             public_key = serialization.load_pem_public_key(student_public_key_pem.encode())
             public_key.verify(
@@ -175,12 +203,20 @@ class University:
                 ),
                 hashes.SHA256()
             )
-            return {"status": "ok", "message": "Challenge verificato con successo"}
+            # Se la verifica ha successo, il challenge è stato usato e va rimosso
+            del self._challenges[student_did]
+            return {"status": "ok", "message": "Challenge verificato con successo."}
         except InvalidSignature:
-            return {"status": "error", "message": "Firma non valida"}
+            # Se la firma non è valida, il challenge è comunque "usato" (fallito) e va rimosso
+            if student_did in self._challenges:
+                del self._challenges[student_did]
+            return {"status": "error", "message": "Firma non valida."}
         except Exception as e:
-            return {"status": "error", "message": f"Errore verifica: {e}"}
-    
+            # In caso di altri errori, rimuovi il challenge
+            if student_did in self._challenges:
+                del self._challenges[student_did]
+            return {"status": "error", "message": f"Errore durante la verifica: {e}"}
+
     def generate_erasmus_credential(self, student):
         """
         Genera una credenziale Erasmus per uno studente.
@@ -188,7 +224,7 @@ class University:
         """
         issuance_date = datetime.utcnow().isoformat() + "Z"
         expiration_date = (datetime.utcnow() + timedelta(days=365)).isoformat() + "Z"
-        
+
         credential_id = f"urn:uuid:{student.username}-erasmus-cred"
         revocation_namespace = "unisa"
         category_id = "erasmus2025"

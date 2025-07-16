@@ -1,3 +1,5 @@
+# Database.py (la tua classe UserManager)
+
 import os
 import json
 from datetime import datetime
@@ -67,20 +69,10 @@ class UserManager(DatabaseManager):
     def __init__(self, db_file=DB_FILE):
         super().__init__(db_file)
 
-    def first_login(self, user_id, username, password, first_name, last_name):
+    # Aggiungi public_key_pem come parametro con valore predefinito
+    def first_login(self, user_id, username, password, first_name, last_name, public_key_pem=""):
         """
-        Registra un nuovo utente nel database.
-
-        Args:
-            user_id (str): ID univoco dell'utente
-            username (str): Nome utente
-            password (str): Password in chiaro
-            did (str): DID dell'utente
-            first_name (str): Nome dell'utente
-            last_name (str): Cognome dell'utente
-
-        Returns:
-            bool: True se l'inserimento ha avuto successo, False altrimenti
+        Registra un nuovo utente nel database, inclusa la chiave pubblica.
         """
         db = self._load_db()
         if any(u["id"] == user_id or u["username"] == username for u in db["users"]):
@@ -97,83 +89,67 @@ class UserManager(DatabaseManager):
             "salt": salt,
             "first_name": first_name,
             "last_name": last_name,
-            "did": "",
+            "did": "",  # Il DID verrà assegnato in un passo successivo tramite update_user_did_and_public_key
+            "public_key_pem": public_key_pem,  # Salva la chiave pubblica
             "created_at": datetime.now().isoformat()
         })
         return self._save_db(db)
-    
+
     def get_user_by_id(self, user_id):
         """
         Recupera un utente dal database per ID
-
-        Args:
-            user_id (str): ID dell'utente
-
-        Returns:
-            dict: Dati dell'utente o None se non trovato
+        Ora restituisce anche 'did' e 'public_key_pem'.
         """
         db = self._load_db()
-
         for user in db["users"]:
             if user["id"] == user_id:
-                # Rimuovi i campi sensibili
                 user_copy = user.copy()
                 user_copy.pop('hash_password')
                 user_copy.pop('salt')
                 return user_copy
-
         return None
 
     def get_user_by_did(self, did):
         """
         Recupera un utente dal database per DID
-
-        Args:
-            did (str): DID dell'utente
-
-        Returns:
-            dict: Dati dell'utente o None se non trovato
+        Ora restituisce anche 'id' e 'public_key_pem'.
         """
         db = self._load_db()
-
         for user in db["users"]:
             if user["did"] == did:
-                # Rimuovi i campi sensibili
                 user_copy = user.copy()
                 user_copy.pop('hash_password')
                 user_copy.pop('salt')
                 return user_copy
-
         return None
-    
+
     def authenticate_user(self, username, password):
         """
-        Verifica le credenziali dell'utente
-
-        Args:
-            username (str): Username dell'utente
-            password (str): Password in chiaro
-
-        Returns:
-            dict: Dati dell'utente se l'autenticazione ha successo, None altrimenti
+        Verifica le credenziali dell'utente e restituisce i suoi dati completi.
         """
         db = self._load_db()
         for user in db["users"]:
             if user["username"] == username:
                 if PasswordManager.verify_password(user["hash_password"], password, user["salt"]):
-                    return user
+                    return user  # Restituisce l'intero oggetto utente
         return None
 
-    def update_user_did(self, user_id, new_did):
+    # Nuovo metodo per aggiornare sia il DID che la chiave pubblica
+    def update_user_did_and_public_key(self, user_id, new_did, public_key_pem):
         """
-        Aggiorna il DID di un utente.
+        Aggiorna il DID e la chiave pubblica di un utente.
+        """
+        db = self._load_db()
+        for user in db["users"]:
+            if user["id"] == user_id:
+                user["did"] = new_did
+                user["public_key_pem"] = public_key_pem
+                return self._save_db(db)
+        return False
 
-        Args:
-            user_id (str): ID dell'utente
-            new_did (str): Nuovo DID da assegnare
-
-        Returns:
-            bool: True se l'aggiornamento ha avuto successo, False altrimenti
+    def update_user_did(self, user_id, new_did):  # Mantieni questo per compatibilità se usato altrove
+        """
+        Aggiorna solo il DID di un utente (meno preferibile rispetto a update_user_did_and_public_key).
         """
         db = self._load_db()
         for user in db["users"]:
@@ -181,10 +157,3 @@ class UserManager(DatabaseManager):
                 user["did"] = new_did
                 return self._save_db(db)
         return False
-
-    def get_user_by_did(self, did):
-        db = self._load_db()
-        for user in db["users"]:
-            if user["did"] == did:
-                return user
-        return None

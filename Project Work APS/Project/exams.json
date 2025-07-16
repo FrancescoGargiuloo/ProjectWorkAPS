@@ -1,0 +1,39 @@
+{
+  "exams": [
+    {
+      "examId": "1234",
+      "name": "aps",
+      "credits": 6,
+      "grade": 30,
+      "date": "2024-10-12"
+    },
+    {
+      "examId": "5678",
+      "name": "Machine Learning",
+      "credits": 9,
+      "grade": 28,
+      "date": "2025-01-20"
+    },
+    {
+      "examId": "9101",
+      "name": "DAA",
+      "credits": 6,
+      "grade": 25,
+      "date": "2024-07-01"
+    },
+    {
+      "examId": "1121",
+      "name": "Data Science",
+      "credits": 12,
+      "grade": 29,
+      "date": "2025-06-15"
+    },
+    {
+      "examId": "3141",
+      "name": "Sistemi Embedded",
+      "credits": 9,
+      "grade": 27,
+      "date": "2025-02-10"
+    }
+  ]
+}
