@@ -15,7 +15,7 @@ DID_PATH = os.path.join(DID_FOLDER, "university_did.json")
 CREDENTIAL_FOLDER = os.path.join(BASE_DIR, "credential")
 
 
-class University:
+class UniversitySalerno:
     def __init__(self, did="did:web:unisa.it"):
         self.did = did
         self.priv_path = os.path.join(KEYS_FOLDER, "university_priv.pem")

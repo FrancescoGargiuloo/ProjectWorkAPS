@@ -1,10 +1,10 @@
-import os, json, base64, hashlib
+import os, json, base64
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from datetime import datetime
-from MerkleTree import hash_leaf, merkle_root, build_merkle_proof
-BASE_DIR = os.path.dirname(__file__)         # ← directory in cui è il file
-DID_FOLDER = os.path.join(BASE_DIR, "DID")   # ← sotto-cartella DID
+from MerkleTree import hash_leaf, build_merkle_proof
+BASE_DIR = os.path.dirname(__file__)
+DID_FOLDER = os.path.join(BASE_DIR, "DID")
 CREDENTIAL_FOLDER = os.path.join(BASE_DIR, "credential")
 KEYS_FOLDER = os.path.join(BASE_DIR, "keys")
 DID_PATH = os.path.join(DID_FOLDER, "student_did.json")

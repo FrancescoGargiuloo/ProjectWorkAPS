@@ -1,7 +1,6 @@
 import os
 import json
 import base64
-import hashlib
 from datetime import datetime
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
@@ -173,7 +172,7 @@ class UniversityRennes:
         )).decode()
 
         # Salva su blockchain
-        tx_hash = self.blockchain.add_block({"merkleRoot": root, "student": self.did})
+        tx_hash = self.blockchain.add_block({"merkleRoot": root, "student": student.did})
 
         # Costruisci la credenziale
         credential = {
@@ -192,7 +191,7 @@ class UniversityRennes:
                 "id": student.did,
                 "givenName": student.first_name or "N/A",
                 "familyName": student.last_name or "N/A",
-                "homeUniversity": "Università di Salerno",
+                "homeUniversity": "Universita' di Salerno",
                 "exams": exams
             },
             "credentialStatus": {

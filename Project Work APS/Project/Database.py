@@ -1,5 +1,3 @@
-# Database.py (la tua classe UserManager)
-
 import os
 import json
 from datetime import datetime

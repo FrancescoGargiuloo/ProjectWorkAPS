@@ -1,5 +1,5 @@
 from Student import Student
-from University import University
+from UniversitySalerno import UniversitySalerno
 import json, os
 from UniversityRennes import UniversityRennes
 
@@ -9,7 +9,7 @@ CRED_FOLDER = os.path.join(BASE_DIR, "credential")
 
 def pre_game():
     print("==== [ UNIVERSITÀ ] ====")
-    university = University()
+    university = UniversitySalerno()
 
     print("\n==== [ LOGIN O REGISTRAZIONE STUDENTE ] ====")
     username = input("Inserisci username: ").strip()
@@ -19,7 +19,7 @@ def pre_game():
     # user_data conterrà 'id', 'username', 'first_name', 'last_name', 'did', 'public_key_pem'
     user_data = university.authenticate_student(username, password)
 
-    current_student_id = None  # Questo sarà l'ID dello studente autenticato/registrato
+    #current_student_id = None  # Questo sarà l'ID dello studente autenticato/registrato
 
     if not user_data:
         print("Utente non trovato o password errata. Registrazione in corso...")
@@ -115,9 +115,8 @@ def pre_game():
     # Riceve solo l'ID dello studente e la firma.
     # Recupera il DID e la chiave pubblica dallo user_id autonomamente dal suo DB.
     verification = university.verify_challenge_response(
-        user_id=current_student_id,  # Ora passiamo l'ID univoco autenticato
+        user_id=current_student_id,
         signature_b64=signature
-        # Non passiamo più student.did o student.get_public_key() direttamente
     )
 
     if verification["status"] == "ok":
@@ -186,7 +185,7 @@ def rennes():
 
 def verify_presentation_at_origin_university():
     print("\n==== [ UNIVERSITÀ ORIGINE - VERIFICA PRESENTATION ] ====")
-    university = University()
+    university = UniversitySalerno()
 
     username = input("Username studente: ").strip()
 
