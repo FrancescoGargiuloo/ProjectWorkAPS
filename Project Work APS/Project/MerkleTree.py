@@ -4,42 +4,32 @@ from typing import List
 
 
 def build_merkle_proof(target_hash, leaves):
-    print(f"DEBUG: build_merkle_proof - target_hash: {target_hash}")
-    print(f"DEBUG: build_merkle_proof - leaves (initial): {leaves}")
-    try:
-        index = leaves.index(target_hash)
-        print(f"DEBUG: build_merkle_proof - target_hash index: {index}")
-    except ValueError:
-        print(f"DEBUG: build_merkle_proof - target_hash '{target_hash}' not found in leaves.")
-        return [] # Ritorna una lista vuota se l'hash non è trovato
-
+    index = leaves.index(target_hash)
     proof = []
     current_level = leaves[:]
-    level_count = 0
+
     while len(current_level) > 1:
-        print(f"DEBUG: build_merkle_proof - Livello {level_count} - current_level: {current_level}")
         next_level = []
         for i in range(0, len(current_level), 2):
             left = current_level[i]
-            right = current_level[i + 1] if i + 1 < len(current_level) else left
+            right = current_level[i+1] if i+1 < len(current_level) else left
             combined = hashlib.sha256((left + right).encode()).hexdigest()
-            print(f"DEBUG: build_merkle_proof - Combinando {left[:8]}... e {right[:8]}... -> {combined[:8]}...")
             next_level.append(combined)
 
             if index == i:
-                proof.append(right)
-                print(f"DEBUG: build_merkle_proof - Aggiunto a proof (right): {right[:8]}...")
+                # fratello a destra
+                proof.append(('right', right))
                 index = len(next_level) - 1
-                print(f"DEBUG: build_merkle_proof - Nuovo index per il prossimo livello: {index}")
             elif index == i + 1:
-                proof.append(left)
-                print(f"DEBUG: build_merkle_proof - Aggiunto a proof (left): {left[:8]}...")
+                # fratello a sinistra
+                proof.append(('left', left))
                 index = len(next_level) - 1
-                print(f"DEBUG: build_merkle_proof - Nuovo index per il prossimo livello: {index}")
+
         current_level = next_level
-        level_count += 1
-    print(f"DEBUG: build_merkle_proof - Proof finale: {proof}")
+
     return proof
+
+
 
 def hash_leaf(data: dict) -> str:
     json_string = json.dumps(data, sort_keys=True)
@@ -69,20 +59,16 @@ def merkle_root(leaves: List[str]) -> str:
     print(f"DEBUG: merkle_root - Root finale: {final_root[:8]}...")
     return final_root
 
-def verify_merkle_proof(leaf_hash: str, proof: list, root: str) -> bool:
-    print(f"DEBUG: verify_merkle_proof - Leaf hash: {leaf_hash[:8]}...")
-    print(f"DEBUG: verify_merkle_proof - Proof: {proof}")
-    print(f"DEBUG: verify_merkle_proof - Root atteso: {root[:8]}...")
+def verify_merkle_proof(leaf_hash, proof, root):
     computed_hash = leaf_hash
-    for sibling in proof:
-        print(f"DEBUG: verify_merkle_proof - Hash corrente: {computed_hash[:8]}..., Sibling: {sibling[:8]}...")
-        nodes = sorted([computed_hash, sibling])
-        print(f"DEBUG: verify_merkle_proof - Nodi ordinati: {nodes[0][:8]}..., {nodes[1][:8]}...")
-        computed_hash = hashlib.sha256((nodes[0] + nodes[1]).encode()).hexdigest()
-        print(f"DEBUG: verify_merkle_proof - Hash calcolato dopo combinazione: {computed_hash[:8]}...")
-    is_valid = (computed_hash == root)
-    print(f"DEBUG: verify_merkle_proof - Confronto finale: {computed_hash[:8]}... == {root[:8]}... -> {is_valid}")
-    return is_valid
+    for direction, sibling_hash in proof:
+        if direction == 'left':
+            combined = sibling_hash + computed_hash
+        else:  # 'right'
+            combined = computed_hash + sibling_hash
+        computed_hash = hashlib.sha256(combined.encode()).hexdigest()
+    return computed_hash == root
+
 
 def reconstruct_merkle_root(proofs_dict: dict) -> str:
     print(f"DEBUG: reconstruct_merkle_root - Input proofs_dict: {proofs_dict}")

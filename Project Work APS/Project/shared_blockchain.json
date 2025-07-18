@@ -1,0 +1,143 @@
+[
+  {
+    "index": 0,
+    "timestamp": "2025-07-18T17:06:09.005770",
+    "data": {
+      "message": "Genesis Block"
+    },
+    "previous_hash": "0",
+    "hash": "0dbc578ecd22b57d0290639f7a2e2cead51f3735bbac109ae91b4104e744a5e4"
+  },
+  {
+    "index": 1,
+    "timestamp": "2025-07-18T17:06:14.058114",
+    "data": {
+      "credentialHash": "6b82b004e57fa804b31b698fdbfbf28d4c39f4d7e7aef9ab986461a1031b8a01",
+      "type": "EligibilityCredential",
+      "studentDID": "did:web:mario.localhost",
+      "issuer": "did:web:unisa.it"
+    },
+    "previous_hash": "0dbc578ecd22b57d0290639f7a2e2cead51f3735bbac109ae91b4104e744a5e4",
+    "hash": "768335873fd0eccca72beaa65d33f438cb1fd1a9f31276dd24a733c7a6cdcb13"
+  },
+  {
+    "index": 2,
+    "timestamp": "2025-07-18T17:06:19.255017",
+    "data": {
+      "merkleRoot": "24b04b049f90e0aadf8d3ae51429b60fc64ef3bb9ecee92e49670f274da1a5d7",
+      "student": "did:web:rennes.it"
+    },
+    "previous_hash": "768335873fd0eccca72beaa65d33f438cb1fd1a9f31276dd24a733c7a6cdcb13",
+    "hash": "bef5cada5df6df85463388a34c5506c50cd739773269fc8461eb4dbdd6584fe6"
+  },
+  {
+    "index": 3,
+    "timestamp": "2025-07-18T17:10:26.408951",
+    "data": {
+      "credentialHash": "946fd0dcdd8f6b8fe0624c6ad3251b342964f195f004c2f99b2bced9acc78c22",
+      "type": "EligibilityCredential",
+      "studentDID": "did:web:mario.localhost",
+      "issuer": "did:web:unisa.it"
+    },
+    "previous_hash": "bef5cada5df6df85463388a34c5506c50cd739773269fc8461eb4dbdd6584fe6",
+    "hash": "af189ab6785aa2fe6bc199bc99e78204056b7fc7e17424426ddbb25ad85106c1"
+  },
+  {
+    "index": 4,
+    "timestamp": "2025-07-18T17:10:31.925361",
+    "data": {
+      "merkleRoot": "24b04b049f90e0aadf8d3ae51429b60fc64ef3bb9ecee92e49670f274da1a5d7",
+      "student": "did:web:rennes.it"
+    },
+    "previous_hash": "af189ab6785aa2fe6bc199bc99e78204056b7fc7e17424426ddbb25ad85106c1",
+    "hash": "1a1f585e7935f390d3fc723ad7b96b2ebe77a4f9e42558f60bac1debf043a6e3"
+  },
+  {
+    "index": 5,
+    "timestamp": "2025-07-18T17:12:32.944811",
+    "data": {
+      "credentialHash": "47b1e55ce45a279619e0dc2e3d7d686a22d56fd6eb240ef6b72bbe481452fd86",
+      "type": "EligibilityCredential",
+      "studentDID": "did:web:mario.localhost",
+      "issuer": "did:web:unisa.it"
+    },
+    "previous_hash": "1a1f585e7935f390d3fc723ad7b96b2ebe77a4f9e42558f60bac1debf043a6e3",
+    "hash": "59b18209508e01f59abfcd067e6247368a0f9f05f18ae97c2bfd2a2d7e332974"
+  },
+  {
+    "index": 6,
+    "timestamp": "2025-07-18T17:12:38.272344",
+    "data": {
+      "merkleRoot": "24b04b049f90e0aadf8d3ae51429b60fc64ef3bb9ecee92e49670f274da1a5d7",
+      "student": "did:web:rennes.it"
+    },
+    "previous_hash": "59b18209508e01f59abfcd067e6247368a0f9f05f18ae97c2bfd2a2d7e332974",
+    "hash": "3794fe9e443115deafa7f5c644c4c953121848bca44dab377448e723cfeff1a5"
+  },
+  {
+    "index": 7,
+    "timestamp": "2025-07-18T17:14:57.459080",
+    "data": {
+      "credentialHash": "0d299d90c5b5156dbb0dc023b90a16652c72c2ef118ef080bd0276b63a73ff52",
+      "type": "EligibilityCredential",
+      "studentDID": "did:web:mario.localhost",
+      "issuer": "did:web:unisa.it"
+    },
+    "previous_hash": "3794fe9e443115deafa7f5c644c4c953121848bca44dab377448e723cfeff1a5",
+    "hash": "4a108d27b57e421fffff6fdd1c23f1f4e830e5cae645ad27050a833283e5e2b1"
+  },
+  {
+    "index": 8,
+    "timestamp": "2025-07-18T17:15:01.835556",
+    "data": {
+      "merkleRoot": "24b04b049f90e0aadf8d3ae51429b60fc64ef3bb9ecee92e49670f274da1a5d7",
+      "student": "did:web:rennes.it"
+    },
+    "previous_hash": "4a108d27b57e421fffff6fdd1c23f1f4e830e5cae645ad27050a833283e5e2b1",
+    "hash": "90246ed9dcf9449668c5cc91d6b827c660d2ac46593f39d7b4ffa77c749aed81"
+  },
+  {
+    "index": 9,
+    "timestamp": "2025-07-18T17:21:03.411256",
+    "data": {
+      "credentialHash": "35d239dcf4d4ae56347054d58ea0e851cf178f8447cd7613a450fad5368539a2",
+      "type": "EligibilityCredential",
+      "studentDID": "did:web:mario.localhost",
+      "issuer": "did:web:unisa.it"
+    },
+    "previous_hash": "90246ed9dcf9449668c5cc91d6b827c660d2ac46593f39d7b4ffa77c749aed81",
+    "hash": "f4db2a291db9bb5bcada337ad1fed04aabab13433e15c25468317cd0d56aeb74"
+  },
+  {
+    "index": 10,
+    "timestamp": "2025-07-18T17:21:08.421882",
+    "data": {
+      "merkleRoot": "24b04b049f90e0aadf8d3ae51429b60fc64ef3bb9ecee92e49670f274da1a5d7",
+      "student": "did:web:rennes.it"
+    },
+    "previous_hash": "f4db2a291db9bb5bcada337ad1fed04aabab13433e15c25468317cd0d56aeb74",
+    "hash": "7b701cba802793ea1671e4b0839073032d4c8e8fd8d77da5ce87f46e8525f182"
+  },
+  {
+    "index": 11,
+    "timestamp": "2025-07-18T17:24:12.101268",
+    "data": {
+      "credentialHash": "3c96e995cee91de9f0726375c7010499ebf4dc60028ce7b613029b3318e304f6",
+      "type": "EligibilityCredential",
+      "studentDID": "did:web:mario.localhost",
+      "issuer": "did:web:unisa.it"
+    },
+    "previous_hash": "7b701cba802793ea1671e4b0839073032d4c8e8fd8d77da5ce87f46e8525f182",
+    "hash": "e3e8430efce5fd6a67620834bd165093a1c53d78c9ff405fc63e2485c26d4635"
+  },
+  {
+    "index": 12,
+    "timestamp": "2025-07-18T17:24:18.847767",
+    "data": {
+      "merkleRoot": "24b04b049f90e0aadf8d3ae51429b60fc64ef3bb9ecee92e49670f274da1a5d7",
+      "student": "did:web:rennes.it"
+    },
+    "previous_hash": "e3e8430efce5fd6a67620834bd165093a1c53d78c9ff405fc63e2485c26d4635",
+    "hash": "267891f99e7495ff07db1241c9aad5b5950982f1067690b1444a32f28df7ede0"
+  }
+]

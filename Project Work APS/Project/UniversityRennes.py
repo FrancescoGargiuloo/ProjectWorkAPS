@@ -152,18 +152,30 @@ class UniversityRennes:
         issuance_date = datetime.utcnow().isoformat() + "Z"
         credential_id = f"urn:uuid:{student.username}-academic-cred"
 
-        leaf_hashes = [hash_leaf(exam) for exam in exams]
-        root = merkle_root(leaf_hashes)
+        # Genera foglie a livello di campo (coerente con selective disclosure)
+        leaves = []
+        for exam in exams:
+            for field in ["name", "grade", "credits", "date"]:
+                if field in exam:
+                    leaf_obj = {"examId": exam["examId"], "field": field, "value": exam[field]}
+                    h = hash_leaf(leaf_obj)
+                    leaves.append(h)
 
+        # Calcola la Merkle Root
+        root = merkle_root(leaves)
+
+        # Firma la root
         priv_key = serialization.load_pem_private_key(open(self.priv_path, "rb").read(), password=None)
         jws_signature = base64.b64encode(priv_key.sign(
             root.encode(),
             padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH),
             hashes.SHA256()
         )).decode()
-        # capire se la root va firmata o meno!!!!!!!!
+
+        # Salva su blockchain
         tx_hash = self.blockchain.add_block({"merkleRoot": root, "student": self.did})
 
+        # Costruisci la credenziale
         credential = {
             "@context": [
                 "https://www.w3.org/2018/credentials/v1",
@@ -211,6 +223,7 @@ class UniversityRennes:
             json.dump(credential, f, indent=2)
 
         print(f"🎓 Academic Credential emessa e salvata: {filepath}")
+
 
     def collect_exam_data(self, file_path=EXAM):
         """

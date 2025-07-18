@@ -154,9 +154,12 @@ class Student:
                         if show == "s":
                             selected_claims[exam_id][field] = exam[field]
                         else:
-                            # Se il campo è nascosto, rimuovi il "value" dalla proof
+                            # Se il campo è nascosto, rimuovi il "value" dalla proof e aggiungi "leafHash"
                             if exam_id in full_proofs and field in full_proofs[exam_id]:
+                                leaf_obj = {"examId": exam_id, "field": field, "value": exam[field]}
+                                leaf_hash = hash_leaf(leaf_obj)
                                 full_proofs[exam_id][field].pop("value", None)
+                                full_proofs[exam_id][field]["leafHash"] = leaf_hash
 
         if not selected_claims:
             print("⚠️ Nessun esame selezionato. Presentazione non generata.")

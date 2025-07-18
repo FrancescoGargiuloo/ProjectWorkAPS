@@ -370,14 +370,17 @@ class University:
             print("✅ Credenziale NON revocata.")
 
             # 7. Verifica delle Merkle Proof fornite per ogni campo rivelato
-            revealed = presentation["verifiableCredential"]["credentialSubject"]["proofs"]
+            revealed = vc["credentialSubject"]["proofs"]
             for exam_id, fields in revealed.items():
                 for field, data in fields.items():
                     if "value" in data:
                         leaf_obj = {"examId": exam_id, "field": field, "value": data["value"]}
                         leaf_hash = hash_leaf(leaf_obj)
-                    else:
+                    elif "leafHash" in data:
                         leaf_hash = data["leafHash"]
+                    else:
+                        print(f"❌ Mancano 'value' e 'leafHash' per {exam_id}.{field}")
+                        return False
 
                     proof = data["proof"]
                     if not verify_merkle_proof(leaf_hash, proof, on_chain_root):
