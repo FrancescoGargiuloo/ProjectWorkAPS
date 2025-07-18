@@ -175,14 +175,40 @@ def rennes():
         return
 
     print("✅ Erasmus Credential verificata con successo.")
-
     # 3. Inserimento esami e generazione Academic VC
     exams = university.collect_exam_data() # vengono direttamente caricati
     if not exams:
-        print("⚠️ Nessun esame inserito.")
+      print("⚠️ Nessun esame inserito.")
+      return
+    university.generate_academic_credential(student, exams)
+    student.generate_selective_presentation_from_terminal()
+
+
+def verify_presentation_at_origin_university():
+    print("\n==== [ UNIVERSITÀ ORIGINE - VERIFICA PRESENTATION ] ====")
+    university = University()
+
+    username = input("Username studente: ").strip()
+
+    # Forza dati base (nome, cognome e DID)
+    did = f"did:web:{username}.localhost"
+    student = Student(username=username, password="*", first_name="", last_name="")
+    student.did = did
+
+    # Carica anche la Selective Presentation
+    path = os.path.join(CRED_FOLDER, f"{username}_vp.json")
+    try:
+        with open(path, "r") as f:
+            presentation = json.load(f)
+    except FileNotFoundError:
+        print("❌ Presentazione non trovata.")
         return
 
-
+    result = university.verify_selective_presentation(presentation)
+    if result:
+        print("✅ Presentazione verificata correttamente.")
+    else:
+        print("❌ Presentazione NON valida.")
 
 if __name__ == "__main__":
     pre_game()
@@ -198,5 +224,7 @@ if __name__ == "__main__":
             break
         elif choice == "2":
             rennes()
+        elif choice == "3":
+            verify_presentation_at_origin_university()
         else:
             print("Opzione non valida.")

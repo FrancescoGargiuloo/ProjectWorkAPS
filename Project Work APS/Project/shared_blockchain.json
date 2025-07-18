@@ -205,5 +205,275 @@
     },
     "previous_hash": "eec387ed6d5017ab33a6ab4a14e37ca55ca35a670b24f5b0d73465349c8591c3",
     "hash": "b3ce318a619a0fcdd12c26d9d518bcb98b9331493fb9c5108777b6bfd21f168d"
+  },
+  {
+    "index": 18,
+    "timestamp": "2025-07-17T17:21:24.768806",
+    "data": {
+      "credentialHash": "5ec1bcf540d410e93e515edfde9a1f63e2ded5cdf446dea53992d32aa3355932",
+      "type": "EligibilityCredential",
+      "studentDID": "did:web:mario.localhost",
+      "issuer": "did:web:unisa.it"
+    },
+    "previous_hash": "b3ce318a619a0fcdd12c26d9d518bcb98b9331493fb9c5108777b6bfd21f168d",
+    "hash": "bd2014b6e724d8865d2486497cc322d8c6cc0c6609b8b64a41697c1a52b02800"
+  },
+  {
+    "index": 19,
+    "timestamp": "2025-07-17T17:28:06.389880",
+    "data": {
+      "credentialHash": "fee0e051d68a6f3aed720424b42fcfe9962d0aa9a5486d6ddd943306fc6368d4",
+      "type": "EligibilityCredential",
+      "studentDID": "did:web:mario.localhost",
+      "issuer": "did:web:unisa.it"
+    },
+    "previous_hash": "bd2014b6e724d8865d2486497cc322d8c6cc0c6609b8b64a41697c1a52b02800",
+    "hash": "76a421a20ee9abe7acdb1788054e5bdfeafc9565e38694dd8ad55e72e1b90a3f"
+  },
+  {
+    "index": 20,
+    "timestamp": "2025-07-17T17:28:24.170252",
+    "data": {
+      "credentialHash": "dfb73ff7639e4c616b2fc47d5552f9b2c8a3a34155d85904f68f62af4f90c78c",
+      "type": "EligibilityCredential",
+      "studentDID": "did:web:mario.localhost",
+      "issuer": "did:web:unisa.it"
+    },
+    "previous_hash": "76a421a20ee9abe7acdb1788054e5bdfeafc9565e38694dd8ad55e72e1b90a3f",
+    "hash": "5c16d12459f4fc9c0f9762eeffd2529ab4a14feee0254b09d62b5948c99a9c80"
+  },
+  {
+    "index": 21,
+    "timestamp": "2025-07-17T17:29:25.946165",
+    "data": {
+      "credentialHash": "7950759a07074f1cd262340a1594dee57cfde93fde4135968a3c2848cf3334d1",
+      "type": "EligibilityCredential",
+      "studentDID": "did:web:mario.localhost",
+      "issuer": "did:web:unisa.it"
+    },
+    "previous_hash": "5c16d12459f4fc9c0f9762eeffd2529ab4a14feee0254b09d62b5948c99a9c80",
+    "hash": "f711e9a4c49c806a5550fd189f021b743d7cf4bbf92c3e1d7b48f8d827cc39be"
+  },
+  {
+    "index": 22,
+    "timestamp": "2025-07-17T17:43:37.565166",
+    "data": {
+      "credentialHash": "e3f0a09d2cdb7d88c97ab96cc05b042839097bd04d100e4e93ff18752b261bd3",
+      "type": "EligibilityCredential",
+      "studentDID": "did:web:mario.localhost",
+      "issuer": "did:web:unisa.it"
+    },
+    "previous_hash": "f711e9a4c49c806a5550fd189f021b743d7cf4bbf92c3e1d7b48f8d827cc39be",
+    "hash": "28067c1016765aa26e6c31470eea985ccbaf9a3ebd45e8693a059b0fc2cae353"
+  },
+  {
+    "index": 23,
+    "timestamp": "2025-07-17T17:46:18.223460",
+    "data": {
+      "credentialHash": "c18d2d93544857493ad3f334f3fa1be2e278f2c769c7f25eb5e9c724deadee60",
+      "type": "EligibilityCredential",
+      "studentDID": "did:web:mario.localhost",
+      "issuer": "did:web:unisa.it"
+    },
+    "previous_hash": "28067c1016765aa26e6c31470eea985ccbaf9a3ebd45e8693a059b0fc2cae353",
+    "hash": "7993f9dc5833848dc4344807a9d5b3ff09be1c295365081fbc6f305e08b7e12d"
+  },
+  {
+    "index": 24,
+    "timestamp": "2025-07-17T17:57:45.405529",
+    "data": {
+      "credentialHash": "0b825cf3c1752221f165224bd7c32e87a599e9090bd8b7766d9246568379dbf0",
+      "type": "EligibilityCredential",
+      "studentDID": "did:web:mario.localhost",
+      "issuer": "did:web:unisa.it"
+    },
+    "previous_hash": "7993f9dc5833848dc4344807a9d5b3ff09be1c295365081fbc6f305e08b7e12d",
+    "hash": "77ec27d8028f904c1b37663539dfc780ea7a4f7318c41d9c889c733c66e8535f"
+  },
+  {
+    "index": 25,
+    "timestamp": "2025-07-18T06:41:37.661881",
+    "data": {
+      "credentialHash": "49e125d48a4e1cacc00941164af55b768d24c0de0aac1f61c695b49c093ea3cf",
+      "type": "EligibilityCredential",
+      "studentDID": "did:web:mario.localhost",
+      "issuer": "did:web:unisa.it"
+    },
+    "previous_hash": "77ec27d8028f904c1b37663539dfc780ea7a4f7318c41d9c889c733c66e8535f",
+    "hash": "f5b70bea8b3d9f89372bdb3ff74f633ab8d623658daec7c1212505cdf9bc6c93"
+  },
+  {
+    "index": 26,
+    "timestamp": "2025-07-18T08:52:08.754055",
+    "data": {
+      "credentialHash": "620ad5e0e27060dad42c828fc9ef80d3bb9a66deca0304a320994ff3f5df0ae9",
+      "type": "EligibilityCredential",
+      "studentDID": "did:web:mario.localhost",
+      "issuer": "did:web:unisa.it"
+    },
+    "previous_hash": "f5b70bea8b3d9f89372bdb3ff74f633ab8d623658daec7c1212505cdf9bc6c93",
+    "hash": "b6ee100ceb26484127331fef3db2776d5600cbc9e82aee5928e167b47da3d915"
+  },
+  {
+    "index": 27,
+    "timestamp": "2025-07-18T09:22:20.582585",
+    "data": {
+      "credentialHash": "4cb1d3a0ed7153adfdfa61d95716c858f9289b98f429b4c7bfa96daf0b974da9",
+      "type": "EligibilityCredential",
+      "studentDID": "did:web:mario.localhost",
+      "issuer": "did:web:unisa.it"
+    },
+    "previous_hash": "b6ee100ceb26484127331fef3db2776d5600cbc9e82aee5928e167b47da3d915",
+    "hash": "f153db87af85cc07b821e9a890564a672c46dd4e086169f708c48f81809bf739"
+  },
+  {
+    "index": 28,
+    "timestamp": "2025-07-18T09:57:43.608149",
+    "data": {
+      "credentialHash": "385b601a1c0f9b9b2f06a68120d28507ebca2f1d58cfbbf2d3bf6fecf02978c2",
+      "type": "EligibilityCredential",
+      "studentDID": "did:web:mario.localhost",
+      "issuer": "did:web:unisa.it"
+    },
+    "previous_hash": "f153db87af85cc07b821e9a890564a672c46dd4e086169f708c48f81809bf739",
+    "hash": "b5a7a14f637d543baf575135945c1c4c271bdc303f5daef524c704e36b2b50c6"
+  },
+  {
+    "index": 29,
+    "timestamp": "2025-07-18T09:59:08.315367",
+    "data": {
+      "credentialHash": "2ab2a7582d109e4ee54a090854ee0f0eebf999b2372b890fea3e3546998856ca",
+      "type": "EligibilityCredential",
+      "studentDID": "did:web:mario.localhost",
+      "issuer": "did:web:unisa.it"
+    },
+    "previous_hash": "b5a7a14f637d543baf575135945c1c4c271bdc303f5daef524c704e36b2b50c6",
+    "hash": "57e959ed4c46013ab4896d9ab8b7b551b73ca2d7836c8a7e34ac36657338911d"
+  },
+  {
+    "index": 30,
+    "timestamp": "2025-07-18T09:59:36.179894",
+    "data": {
+      "credentialHash": "c16dbbd9218518c1396c62b5a77d51f99d970d1912c29bdd3eb67184f4b138ff",
+      "type": "EligibilityCredential",
+      "studentDID": "did:web:mario.localhost",
+      "issuer": "did:web:unisa.it"
+    },
+    "previous_hash": "57e959ed4c46013ab4896d9ab8b7b551b73ca2d7836c8a7e34ac36657338911d",
+    "hash": "acbf40bd3dafc35d3729d4b1f7bba87a15733e37ddca9e42da83ebe25647c77a"
+  },
+  {
+    "index": 31,
+    "timestamp": "2025-07-18T10:08:04.859904",
+    "data": {
+      "credentialHash": "e842664e51d1bcb3de3b7f55dee0d92ae7e1c0732a68fa5c4201728d93abfc79",
+      "type": "EligibilityCredential",
+      "studentDID": "did:web:mario.localhost",
+      "issuer": "did:web:unisa.it"
+    },
+    "previous_hash": "acbf40bd3dafc35d3729d4b1f7bba87a15733e37ddca9e42da83ebe25647c77a",
+    "hash": "a34c8b90f6139e30289ac27b561e8868c6e454b42158bdc109595a2e9297c092"
+  },
+  {
+    "index": 32,
+    "timestamp": "2025-07-18T10:14:48.909050",
+    "data": {
+      "credentialHash": "584acab2b7425285e15346ccdd7fa27c0ac6605de82f914530ecc54a86de2396",
+      "type": "EligibilityCredential",
+      "studentDID": "did:web:mario.localhost",
+      "issuer": "did:web:unisa.it"
+    },
+    "previous_hash": "a34c8b90f6139e30289ac27b561e8868c6e454b42158bdc109595a2e9297c092",
+    "hash": "851575dbd20cdfc5a9b5ab69967fab233e9956161aa4ee3cdce6e19c535bccb0"
+  },
+  {
+    "index": 33,
+    "timestamp": "2025-07-18T10:18:12.926058",
+    "data": {
+      "credentialHash": "9a9c1ac71b2b93acfce7573cda991211e5576ee076f798d8f7f78f46dc9f5e20",
+      "type": "EligibilityCredential",
+      "studentDID": "did:web:mario.localhost",
+      "issuer": "did:web:unisa.it"
+    },
+    "previous_hash": "851575dbd20cdfc5a9b5ab69967fab233e9956161aa4ee3cdce6e19c535bccb0",
+    "hash": "89e8f2b2a911ff6adde60617b579247db40effca7d7a66905f4f84c32ee22ef5"
+  },
+  {
+    "index": 34,
+    "timestamp": "2025-07-18T10:23:40.653888",
+    "data": {
+      "credentialHash": "bc7a8754d3df5f7df0627309129d607fbdd8f6c0ca08cd3500d9ecb35f4c08e1",
+      "type": "EligibilityCredential",
+      "studentDID": "did:web:mario.localhost",
+      "issuer": "did:web:unisa.it"
+    },
+    "previous_hash": "89e8f2b2a911ff6adde60617b579247db40effca7d7a66905f4f84c32ee22ef5",
+    "hash": "ae1b321c25006811434d3015e4084d129d1c9cedfed9ece21e0fce7058d0d6fc"
+  },
+  {
+    "index": 35,
+    "timestamp": "2025-07-18T10:26:01.899407",
+    "data": {
+      "credentialHash": "f12bc8cca06fb0607a9f3abc7fbe1e61c5867089fe80a41b51016d48dedc805c",
+      "type": "EligibilityCredential",
+      "studentDID": "did:web:mario.localhost",
+      "issuer": "did:web:unisa.it"
+    },
+    "previous_hash": "ae1b321c25006811434d3015e4084d129d1c9cedfed9ece21e0fce7058d0d6fc",
+    "hash": "8e7c4ffc859f7a2b6e8bb5f9c2612b5754e7580cf04e8cb76151b159e6ade761"
+  },
+  {
+    "index": 36,
+    "timestamp": "2025-07-18T10:26:09.202254",
+    "data": {
+      "merkleRoot": "60a15cc670003857d2f500e6d622b3f710cd99920b467da1353878b151e00d3d",
+      "student": "did:web:rennes.it"
+    },
+    "previous_hash": "8e7c4ffc859f7a2b6e8bb5f9c2612b5754e7580cf04e8cb76151b159e6ade761",
+    "hash": "341821181f79de92425d4242c2a1759cb34387c816ad80308e1a5ee787ca06d2"
+  },
+  {
+    "index": 37,
+    "timestamp": "2025-07-18T10:32:57.562515",
+    "data": {
+      "credentialHash": "73378080cd5119862f3896fa85f7a57d1ab62467ecd9158360c41f206f5b58a8",
+      "type": "EligibilityCredential",
+      "studentDID": "did:web:mario.localhost",
+      "issuer": "did:web:unisa.it"
+    },
+    "previous_hash": "341821181f79de92425d4242c2a1759cb34387c816ad80308e1a5ee787ca06d2",
+    "hash": "64b572858b3a8936c63e1dac78711380dc7c4ea55a35ba332556a465959a8d86"
+  },
+  {
+    "index": 38,
+    "timestamp": "2025-07-18T10:33:05.388604",
+    "data": {
+      "merkleRoot": "60a15cc670003857d2f500e6d622b3f710cd99920b467da1353878b151e00d3d",
+      "student": "did:web:rennes.it"
+    },
+    "previous_hash": "64b572858b3a8936c63e1dac78711380dc7c4ea55a35ba332556a465959a8d86",
+    "hash": "38fb551325c8343d7dff6e184ee302ee0b5cdab34e485371f5e078623763d289"
+  },
+  {
+    "index": 39,
+    "timestamp": "2025-07-18T10:35:05.861050",
+    "data": {
+      "credentialHash": "0b7e6e1bc4706290576108dc6da570f3f94672818ece2dcc4a89b6de6ca34490",
+      "type": "EligibilityCredential",
+      "studentDID": "did:web:mario.localhost",
+      "issuer": "did:web:unisa.it"
+    },
+    "previous_hash": "38fb551325c8343d7dff6e184ee302ee0b5cdab34e485371f5e078623763d289",
+    "hash": "b53ab5ec70ff60b39bbb0e9548529bad50ca0674c0227ad9f473d5560eb3f7b5"
+  },
+  {
+    "index": 40,
+    "timestamp": "2025-07-18T10:35:11.928140",
+    "data": {
+      "merkleRoot": "60a15cc670003857d2f500e6d622b3f710cd99920b467da1353878b151e00d3d",
+      "student": "did:web:rennes.it"
+    },
+    "previous_hash": "b53ab5ec70ff60b39bbb0e9548529bad50ca0674c0227ad9f473d5560eb3f7b5",
+    "hash": "363d2738664625a17bccf57154baafb77fb9e9846a4ba80356e3a0ee3f9dc9fc"
   }
 ]

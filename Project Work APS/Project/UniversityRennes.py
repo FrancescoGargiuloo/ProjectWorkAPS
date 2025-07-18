@@ -20,13 +20,13 @@ os.makedirs(KEYS_FOLDER, exist_ok=True)
 os.makedirs(DID_FOLDER, exist_ok=True)
 
 DID_PATH = os.path.join(DID_FOLDER, "rennes_did.json")
+EXAM = os.path.join(BASE_DIR, "exams.json")
 
 class UniversityRennes:
     def __init__(self, did="did:web:rennes.it"):
         self.did = did
         self.priv_path = os.path.join(KEYS_FOLDER, "rennes_priv.pem")
         self.pub_path = os.path.join(KEYS_FOLDER, "rennes_pub.pem")
-        #self.user_manager = UserManager()
         self.blockchain = Blockchain()
         self.revocation_registry = RevocationRegistry()
 
@@ -212,7 +212,7 @@ class UniversityRennes:
 
         print(f"🎓 Academic Credential emessa e salvata: {filepath}")
 
-    def collect_exam_data(self, file_path="exams.json"):
+    def collect_exam_data(self, file_path=EXAM):
         """
         Carica i dati degli esami da un file JSON.
 

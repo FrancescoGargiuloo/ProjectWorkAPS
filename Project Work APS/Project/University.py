@@ -7,7 +7,7 @@ from Database import UserManager  # Assicurati che UserManager gestisca public_k
 from Blockchain import Blockchain
 from RevocationRegistry import RevocationRegistry
 import hashlib
-
+from MerkleTree import hash_leaf, verify_merkle_proof, reconstruct_merkle_root
 BASE_DIR = os.path.dirname(__file__)
 KEYS_FOLDER = os.path.join(BASE_DIR, "keys")
 DID_FOLDER = os.path.join(BASE_DIR, "DID")
@@ -305,3 +305,101 @@ class University:
             json.dump(credential_data, f, indent=2)
 
         print(f"Credenziale Erasmus salvata")
+
+    
+    def verify_selective_presentation(self, presentation: dict) -> bool:
+        try:
+            # 1. Verifica firma della Verifiable Presentation
+
+            student_did = presentation["holder"]
+            vp_proof = presentation["proof"]
+            jws = vp_proof["jws"]
+            verification_method = vp_proof["verificationMethod"]
+
+            did_doc = self.resolve_did(student_did)
+            pub_key_pem = None
+            for vm in did_doc.get("verificationMethod", []):
+                if vm["id"] == verification_method:
+                    pub_key_pem = vm["publicKeyPem"]
+                    break
+
+            if not pub_key_pem:
+                print("❌ verificationMethod dello studente non trovato.")
+                return False
+
+            public_key = serialization.load_pem_public_key(pub_key_pem.encode())
+
+            # 2. Ricostruisco la presentazione senza il campo proof (quella firmata)
+            unsigned_presentation = presentation.copy()
+            unsigned_presentation.pop("proof", None)
+            payload = json.dumps(unsigned_presentation, sort_keys=True).encode()
+
+            # 3. Verifico la firma
+            public_key.verify(
+                base64.b64decode(jws),
+                payload,
+                padding.PSS(
+                    mgf=padding.MGF1(hashes.SHA256()),
+                    salt_length=padding.PSS.MAX_LENGTH
+                ),
+                hashes.SHA256()
+            )
+            print("✅ Firma della presentazione valida.")
+
+            # 4. Estrai la VC dalla presentazione
+            vc = presentation["verifiableCredential"]
+
+            # 5. Recupera la Merkle Root dalla blockchain
+            tx_hash = vc["evidence"]["transactionHash"]
+            on_chain_root = self.blockchain.get_merkle_root(tx_hash)
+            if not on_chain_root:
+                print("❌ Merkle Root non trovata sulla blockchain.")
+                return False
+            print(f"✅ Merkle Root recuperata: {on_chain_root}")
+
+            # 6. Verifica lo stato di revoca
+            status = vc["credentialStatus"]
+            is_revoked = self.revocation_registry.is_revoked(
+                namespace=status["namespace"],
+                list_id=status["revocationList"],
+                revocation_key=status["revocationKey"]
+            )
+            if is_revoked:
+                print("❌ La credenziale è stata revocata.")
+                return False
+            print("✅ Credenziale NON revocata.")
+
+            # 7. Verifica delle Merkle Proof fornite per ogni campo rivelato
+            revealed = presentation["verifiableCredential"]["credentialSubject"]["proofs"]
+            for exam_id, fields in revealed.items():
+                for field, data in fields.items():
+                    if "value" in data:
+                        leaf_obj = {"examId": exam_id, "field": field, "value": data["value"]}
+                        leaf_hash = hash_leaf(leaf_obj)
+                    else:
+                        leaf_hash = data["leafHash"]
+
+                    proof = data["proof"]
+                    if not verify_merkle_proof(leaf_hash, proof, on_chain_root):
+                        print(f"❌ Merkle proof non valida per {exam_id}.{field}")
+                        return False
+
+            print("✅ Tutte le Merkle proof sono valide.")
+
+            # 8. Ricostruzione della Merkle Root completa e confronto con on-chain
+            reconstructed = reconstruct_merkle_root(revealed)
+            if reconstructed != on_chain_root:
+                print("❌ La Merkle Root ricostruita non coincide con quella on-chain.")
+                return False
+            print("✅ Merkle Root ricostruita corrisponde alla root on-chain.")
+
+            # 9. Tutto ok
+            print("🎓 Verifica completata. Presentazione valida.")
+            return True
+
+        except InvalidSignature:
+            print("❌ Firma della presentazione non valida.")
+            return False
+        except Exception as e:
+            print(f"❌ Errore durante la verifica: {e}")
+            return False

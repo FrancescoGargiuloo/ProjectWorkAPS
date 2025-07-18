@@ -75,3 +75,20 @@ class Blockchain:
 
     def get_all_blocks(self):
         return [b.to_dict() for b in self.chain]
+
+    def get_merkle_root(self, tx_hash):
+        """
+        Cerca nella blockchain il blocco con hash == tx_hash
+        e ritorna la Merkle Root salvata in 'data'.
+        """
+        for block in self.chain:
+            if block.hash == tx_hash:
+                # supponendo che la Merkle Root sia salvata come:
+                # block.data = {"merkleRoot": "...", ...}
+                if isinstance(block.data, dict) and "merkleRoot" in block.data:
+                    return block.data["merkleRoot"]
+                else:
+                    print("❌ Il blocco non contiene la Merkle Root nei dati.")
+                    return None
+        print("❌ Blocco con hash specificato non trovato.")
+        return None
