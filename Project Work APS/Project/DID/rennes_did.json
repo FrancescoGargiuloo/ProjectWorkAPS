@@ -6,7 +6,7 @@
       "id": "did:web:rennes.it#key-1",
       "type": "RsaVerificationKey2018",
       "controller": "did:web:rennes.it",
-      "publicKeyPem": "-----BEGIN PUBLIC KEY-----\r\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxJ7dzvHAAkr+iG4oSIbp\r\ntNojI4H9/Tw9uwOUspkrOif4VVT+fW1IvY0S774VQBThf+H/cD+svo54G7ze7xqO\r\nkrBvE7G0Ob/SVmf7Wx6m6uctlz+3mh8Lf0N3Zu69AcVxA5h0EaM8KiNjPUiAOatI\r\nyxbiFP4RZ09shlg1V2bGQihh5W0lr9Bydjtzm+nS/lLTEIiWC6qDXwGdm5FrazrI\r\n45qWsCz9blzODBsNkAienCL3ibWS7NWIy4q1/WDqoiW50Wg6DG+HrpAtOySMFo3p\r\nvWzsNLB0Yd4nECflD/v80AaiMlGAvV9ilFNl2o1eWFxsIUpprbbrOwitj0a+DOn0\r\nCwIDAQAB\r\n-----END PUBLIC KEY-----\r\n"
+      "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxJ7dzvHAAkr+iG4oSIbp\ntNojI4H9/Tw9uwOUspkrOif4VVT+fW1IvY0S774VQBThf+H/cD+svo54G7ze7xqO\nkrBvE7G0Ob/SVmf7Wx6m6uctlz+3mh8Lf0N3Zu69AcVxA5h0EaM8KiNjPUiAOatI\nyxbiFP4RZ09shlg1V2bGQihh5W0lr9Bydjtzm+nS/lLTEIiWC6qDXwGdm5FrazrI\n45qWsCz9blzODBsNkAienCL3ibWS7NWIy4q1/WDqoiW50Wg6DG+HrpAtOySMFo3p\nvWzsNLB0Yd4nECflD/v80AaiMlGAvV9ilFNl2o1eWFxsIUpprbbrOwitj0a+DOn0\nCwIDAQAB\n-----END PUBLIC KEY-----\n"
     }
   ]
 }

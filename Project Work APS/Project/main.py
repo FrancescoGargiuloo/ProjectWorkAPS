@@ -218,6 +218,7 @@ if __name__ == "__main__":
         print("\n==== [ MENU ] ====")
         print("1. Esci")
         print("2. Richiedi Attestazione Voti")
+        print("3. Presenta VP")
         choice = input("Seleziona un'opzione: ").strip()
 
         if choice == "1":
