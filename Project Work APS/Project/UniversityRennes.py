@@ -1,7 +1,5 @@
-import os
-import json
-import base64
-from datetime import datetime
+import os, json, base64, random, string
+from datetime import datetime, timedelta
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.exceptions import InvalidSignature
@@ -19,8 +17,7 @@ os.makedirs(CREDENTIAL_FOLDER, exist_ok=True)
 os.makedirs(KEYS_FOLDER, exist_ok=True)
 os.makedirs(DID_FOLDER, exist_ok=True)
 
-# DID_PATH is no longer strictly needed as a global, but kept for context if other parts use it.
-# The _update_did_document will now generate the path dynamically.
+
 DID_PATH = os.path.join(DID_FOLDER, "rennes_did.json")  # This global is now overridden by dynamic path generation
 EXAM = os.path.join(BASE_DIR, "exams.json")
 
@@ -43,6 +40,7 @@ class UniversityRennes:
         self.blockchain = Blockchain()
         self.revocation_registry = RevocationRegistry()
         self.user_manager = UserManager(db_name="rennes_users")
+        self._challenges = {}
 
         if not os.path.exists(self.priv_path):
             self._generate_keypair()
@@ -93,6 +91,43 @@ class UniversityRennes:
 
         with open(path, "w") as f:  # Use the dynamically generated path
             json.dump(did_doc, f, indent=2)
+
+
+    def authenticate_student(self, username, password):
+        """
+        Autentica uno studente con username e password.
+        :param username: Nome utente dello studente.
+        :param password: Password dello studente.
+        :return: Dati dell'utente (incluso 'id', 'did', 'public_key_pem' se presenti) se l'autenticazione ha successo, altrimenti None.
+        """
+        return self.user_manager.authenticate_user(username, password)
+
+
+    def register_student(self, user_id, username, password, first_name, last_name, public_key_pem):
+        """
+        Registra un nuovo studente nel DB interno dell'università, includendo la chiave pubblica.
+        :param user_id: ID univoco dello studente.
+        :param username: Username dello studente.
+        :param password: Password dello studente.
+        :param first_name: Nome dello studente.
+        :param last_name: Cognome dello studente.
+        :param public_key_pem: Chiave pubblica PEM dello studente.
+        :return: True se la registrazione e l'aggiornamento avvengono con successo, False altrimenti.
+        """
+        success = self.user_manager.first_login(user_id, username, password, first_name, last_name)
+        if success:
+            return self.user_manager.update_user_did_and_public_key(user_id, "", public_key_pem)
+        return False
+
+    def assign_did_to_student(self, user_id, new_did, public_key_pem):
+        """
+        Assegna un nuovo DID e la chiave pubblica a uno studente esistente.
+        :param user_id: ID dell'utente studente.
+        :param new_did: Nuovo DID da assegnare.
+        :param public_key_pem: Chiave pubblica PEM dello studente.
+        :return: True se l'aggiornamento ha avuto successo, False altrimenti.
+        """
+        return self.user_manager.update_user_did_and_public_key(user_id, new_did, public_key_pem)
 
     def resolve_did(self, did: str) -> dict:
         """
@@ -187,6 +222,77 @@ class UniversityRennes:
         :return: Lista di stringhe DID.
         """
         return ["did:web:unisa.it"]
+
+    def generate_challenge(self, user_id: str) -> str:
+        """
+        Genera una challenge per uno studente autenticato tramite il suo user_id.
+        Il DID dello studente viene recuperato dal DB dell'università.
+        :param user_id: ID dell'utente studente (autenticato).
+        :return: Una stringa che rappresenta la challenge generata, o None se il DID non è trovato.
+        """
+        user_data = self.user_manager.get_user_by_id(user_id)
+        if not user_data or not user_data.get("did"):
+            print(f"Errore in generate_challenge: DID non trovato per l'utente con ID {user_id}")
+            return None
+
+        student_did = user_data["did"]
+        challenge_value = ''.join(random.choices(string.ascii_letters + string.digits, k=32))
+        self._challenges[student_did] = {
+            "value": challenge_value,
+            "expires_at": datetime.now() + timedelta(minutes=5)
+        }
+        return challenge_value
+
+    def verify_challenge_response(self, user_id: str, signature_b64: str):
+        """
+        Verifica la risposta a una challenge generata per uno studente.
+        Recupera il DID e la chiave pubblica dello studente dal DB dell'università
+        usando il user_id autenticato.
+        :param user_id: ID dell'utente studente (autenticato).
+        :param signature_b64: Firma in base64 della challenge inviata dallo studente.
+        :return: Risultato della verifica come dizionario con status e messaggio.
+        """
+        user_data = self.user_manager.get_user_by_id(user_id)
+        if not user_data:
+            return {"status": "error", "message": f"Utente con ID {user_id} non trovato nel DB dell'università."}
+
+        student_did = user_data.get("did")
+        if not student_did:
+            return {"status": "error", "message": f"DID non assegnato all'utente con ID {user_id} nel DB."}
+
+        student_public_key_pem = user_data.get("public_key_pem")
+        if not student_public_key_pem:
+            return {"status": "error", "message": f"Chiave pubblica non trovata per il DID: {student_did} nel DB."}
+
+        challenge_data = self._challenges.get(student_did)
+        if not challenge_data:
+            return {"status": "error", "message": "Nessun challenge attivo trovato per questo DID."}
+
+        if datetime.now() > challenge_data["expires_at"]:
+            del self._challenges[student_did]
+            return {"status": "error", "message": "Challenge scaduto."}
+
+        try:
+            public_key = serialization.load_pem_public_key(student_public_key_pem.encode())
+            public_key.verify(
+                base64.b64decode(signature_b64),
+                challenge_data["value"].encode(),
+                padding.PSS(
+                    mgf=padding.MGF1(hashes.SHA256()),
+                    salt_length=padding.PSS.MAX_LENGTH
+                ),
+                hashes.SHA256()
+            )
+            del self._challenges[student_did]
+            return {"status": "ok", "message": "Challenge verificato con successo."}
+        except InvalidSignature:
+            if student_did in self._challenges:
+                del self._challenges[student_did]
+            return {"status": "error", "message": "Firma non valida."}
+        except Exception as e:
+            if student_did in self._challenges:
+                del self._challenges[student_did]
+            return {"status": "error", "message": f"Errore durante la verifica: {e}"}
 
     def generate_academic_credential(self, student, exams: list):
         """

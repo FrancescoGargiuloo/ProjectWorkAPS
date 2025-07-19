@@ -158,66 +158,133 @@ def request_erasmus_credential_from_unisa(student_obj, university_salerno):
 
 
 def rennes_interaction(student_obj):
-    """
-    Handles the student's interaction with the University of Rennes.
-    Includes simulated authentication, sending and verifying the Erasmus credential,
-    and issuing the academic credential.
-    """
     print("\n==== [ UNIVERSITÉ DE RENNES ] ====")
     university_rennes = UniversityRennes()
 
-    # The student retrieves the DID of the University of Rennes
+    # Recupero DID università Rennes e verifica trusted DID come ora
     try:
         rennes_did_doc = university_rennes.resolve_did("did:web:rennes.it")
         rennes_did = rennes_did_doc["id"]
         print(f"Studente: Ho recuperato il DID dell'Università di Rennes: {rennes_did}")
     except Exception as e:
-        print(f"Studente: Errore nel recupero del DID di Rennes: {e}")
+        print(f"Errore nel recupero DID Rennes: {e}")
         return
 
-    # Check if Rennes's DID is in the student's wallet's trusted DIDs list
     if rennes_did not in student_obj.get_trusted_dids():
-        print(f"Studente: ❌ Il DID di Rennes ({rennes_did}) NON è nella mia lista di DID trusted. Interrompo.")
+        print(f"❌ Il DID di Rennes ({rennes_did}) non è nella mia lista di DID trusted. Interrompo.")
         return
-    print(f"Studente: ✅ Il DID di Rennes ({rennes_did}) è nella mia lista di DID trusted.")
+    print(f"✅ Il DID di Rennes ({rennes_did}) è nella mia lista di DID trusted.")
 
-    # Simulation of student authentication with username and password at Rennes.
-    print(f"\nStudente: Tentativo di autenticazione con username '{student_obj.username}' a Rennes...")
-    # In a real scenario, Rennes would have its own authentication system.
-    # Here, as per the request, we assume that if the student_obj is valid, authentication is "successful".
-    if student_obj:
-        print(f"Studente: ✅ Autenticazione simulata a Rennes riuscita per {student_obj.username}.")
+    # Qui gestiamo la registrazione / autenticazione con Rennes
+
+    # Chiedo username e password per Rennes (potrebbero essere anche email o altra info)
+    username = input("Inserisci username per Università di Rennes: ").strip()
+    password = input("Inserisci password per Università di Rennes: ").strip()
+
+    user_data = university_rennes.authenticate_student(username, password)
+
+    if not user_data:
+        # Utente non registrato: chiedo se vuole registrarsi
+        print("Utente non trovato o password errata.")
+        register_choice = input("Vuoi registrarti a Rennes? (s/n): ").strip().lower()
+        if register_choice != 's':
+            print("Accesso negato.")
+            return
+
+        # Registrazione studente Rennes
+        print("\n==== [ REGISTRAZIONE NUOVO STUDENTE A RENNES ] ====")
+        first_name = input("Inserisci il tuo nome: ").strip()
+        last_name = input("Inserisci il tuo cognome: ").strip()
+        user_id = str(uuid.uuid4())
+
+        # Creo oggetto studente specifico per Rennes, genera DID e chiavi
+        student_rennes_obj = Student(username=username, password=password,
+                                     first_name=first_name, last_name=last_name)
+
+        # Registro studente in DB Rennes (ID, username, hashed password, dati e chiave pubblica)
+        success = university_rennes.register_student(user_id, username, password,
+                                                     first_name, last_name,
+                                                     student_rennes_obj.get_public_key())
+
+        if not success:
+            print("Errore durante la registrazione nel DB di Rennes.")
+            return
+
+        # Assegno DID e chiave pubblica nel DB Rennes
+        university_rennes.assign_did_to_student(user_id, student_rennes_obj.did,
+                                                student_rennes_obj.get_public_key())
+
+        # Challenge-response per validare autenticità
+        challenge = university_rennes.generate_challenge(user_id)
+        if not challenge:
+            print("Errore generazione challenge per nuovo studente.")
+            return
+
+        print(f"Challenge generato: {challenge}")
+        signature = student_rennes_obj.sign(challenge)
+        print(f"Firma generata: {signature[:32]}...")
+
+        verification = university_rennes.verify_challenge_response(user_id, signature)
+        if verification["status"] != "ok":
+            print(f"Verifica challenge-response fallita: {verification['message']}")
+            return
+
+        print("✅ Registrazione e challenge-response completati con successo.")
+        user_data = university_rennes.user_manager.get_user_by_id(user_id)
+        # Aggiorno l'oggetto student_obj con i dati Rennes se serve
+
     else:
-        print("Studente: ❌ Autenticazione simulata a Rennes fallita. Oggetto studente non valido.")
-        return
+        # Autenticazione esistente, creazione oggetto Student Rennes
+        print("✅ Autenticazione a Rennes riuscita.")
+        user_id = user_data["id"]
 
-    # The student sends the Erasmus eligibility credential
-    print("\nStudente: Invio la mia credenziale di eligibilità Erasmus all'Università di Rennes.")
+        student_rennes_obj = Student(username=username, password=password,
+                                     first_name=user_data.get("first_name"),
+                                     last_name=user_data.get("last_name"))
+        student_rennes_obj.did = user_data.get("did")
+
+        # Genero challenge-response anche qui
+        challenge = university_rennes.generate_challenge(user_id)
+        if not challenge:
+            print("Errore generazione challenge per utente esistente.")
+            return
+
+        print(f"Challenge generato: {challenge}")
+        signature = student_rennes_obj.sign(challenge)
+        print(f"Firma generata: {signature[:32]}...")
+
+        verification = university_rennes.verify_challenge_response(user_id, signature)
+        if verification["status"] != "ok":
+            print(f"Verifica challenge-response fallita: {verification['message']}")
+            return
+
+        print("✅ Challenge-response superato.")
+
+    # A questo punto lo studente è autenticato e validato a Rennes
+    # Prosegui con la fase di invio credenziale Erasmus e tutto il resto
+
+    print("\nInvio credenziale Erasmus all'Università di Rennes...")
+
     erasmus_cred = student_obj.load_erasmus_credential()
     if not erasmus_cred:
-        print("Studente: ❌ Impossibile inviare la credenziale Erasmus (non trovata).")
+        print("Credenziale Erasmus non trovata. Richiedere prima a UniSA.")
         return
 
-    # The University of Rennes performs all necessary checks on the Erasmus credential
-    print("\nUniversità di Rennes: Ricevuta credenziale Erasmus. Avvio la verifica...")
     if not university_rennes.verify_erasmus_credential(erasmus_cred):
-        print("Università di Rennes: ❌ Credenziale Erasmus NON valida. Richiesta respinta.")
+        print("Credenziale Erasmus NON valida. Operazione interrotta.")
         return
 
-    print("Università di Rennes: ✅ Credenziale Erasmus verificata con successo.")
+    print("Credenziale Erasmus verificata correttamente da Rennes.")
 
-    # Exam entry and Academic VC generation by Rennes
-    print("\nUniversità di Rennes: Credenziale Erasmus valida. Procedo con l'emissione della Credenziale Accademica.")
-    exams = university_rennes.collect_exam_data() # Rennes loads its own exam data
+    exams = university_rennes.collect_exam_data()
     if not exams:
-        print("Università di Rennes: ⚠️ Nessun esame disponibile per l'emissione della credenziale accademica.")
+        print("Nessun esame disponibile per la credenziale accademica.")
         return
 
     university_rennes.generate_academic_credential(student_obj, exams)
-    print("Università di Rennes: ✅ Credenziale Accademica emessa.")
+    print("Credenziale Accademica emessa.")
 
-    # The student generates the selective presentation
-    print("\nStudente: Ora genererò una presentazione selettiva della mia credenziale accademica.")
+    print("\nGenerazione presentazione selettiva da parte dello studente...")
     student_obj.generate_selective_presentation_from_terminal()
 
 
