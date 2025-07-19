@@ -325,7 +325,6 @@ if __name__ == "__main__":
 
     if authenticated_student:
         print("\n==== FASE PRE GAME COMPLETATA ====")
-        print("LO STUDENTE SI PRESENTA ALL'UNIVERSITÀ OSPITANTE E COMPLETA IL PERCORSO DI STUDIO")
         while True:
             print("\n==== [ MENU PRINCIPALE ] ====")
             print("1. Esci")
