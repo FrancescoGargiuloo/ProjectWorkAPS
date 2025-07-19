@@ -11,8 +11,7 @@ import base64
 from Student import Student # Ora importiamo la classe Student esterna
 from UniversitySalerno import UniversitySalerno
 from UniversityRennes import UniversityRennes
-# Assumendo che PasswordManager sia disponibile e funzioni correttamente
-# from PasswordManager import PasswordManager
+
 
 BASE_DIR = os.path.dirname(__file__)
 CRED_FOLDER = os.path.join(BASE_DIR, "credential")
@@ -51,7 +50,7 @@ def pre_game():
             user_id = str(uuid.uuid4())
 
             # Create the Student object. This object WILL GENERATE keys and DID for the first time.
-            student_obj = Student(username=username, password=password,
+            student_obj = Student(username=username, password=password, user_id=user_id,
                                   first_name=first_name, last_name=last_name)
 
             # Register the student in the university's DB, saving their ID, username, HASHED password,
@@ -83,7 +82,7 @@ def pre_game():
         # Re-create the Student object for existing user.
         student_obj = Student(
             username=username,
-            password=password,
+            password=password,user_id=current_student_id,
             first_name=user_data.get("first_name"),
             last_name=user_data.get("last_name")
         )
@@ -198,7 +197,7 @@ def rennes_interaction(student_obj):
         user_id = str(uuid.uuid4())
 
         # Creo oggetto studente specifico per Rennes, genera DID e chiavi
-        student_rennes_obj = Student(username=username, password=password,
+        student_rennes_obj = Student(username=username, password=password,user_id=user_id,
                                      first_name=first_name, last_name=last_name)
 
         # Registro studente in DB Rennes (ID, username, hashed password, dati e chiave pubblica)
@@ -238,7 +237,7 @@ def rennes_interaction(student_obj):
         print("✅ Autenticazione a Rennes riuscita.")
         user_id = user_data["id"]
 
-        student_rennes_obj = Student(username=username, password=password,
+        student_rennes_obj = Student(username=username, password=password,user_id=user_id,
                                      first_name=user_data.get("first_name"),
                                      last_name=user_data.get("last_name"))
         student_rennes_obj.did = user_data.get("did")
@@ -328,14 +327,14 @@ if __name__ == "__main__":
         while True:
             print("\n==== [ MENU PRINCIPALE ] ====")
             print("1. Esci")
-            print("2. Richiedi credenziale Erasmus a UniSA") # New option
+            print("2. Richiedi credenziale Erasmus a UniSA")
             print("3. Interagisci con Università di Rennes (Richiedi Attestazione Voti)")
             print("4. Presenta Verifiable Presentation (VP) all'Università di Salerno")
             choice = input("Seleziona un'opzione: ").strip()
 
             if choice == "1":
                 break
-            elif choice == "2": # New option handling
+            elif choice == "2":
                 request_erasmus_credential_from_unisa(authenticated_student, salerno_university)
             elif choice == "3":
                 rennes_interaction(authenticated_student)

@@ -9,14 +9,14 @@ BASE_DIR = os.path.dirname(__file__)
 DID_FOLDER = os.path.join(BASE_DIR, "DID")
 CREDENTIAL_FOLDER = os.path.join(BASE_DIR, "credential")
 KEYS_FOLDER = os.path.join(BASE_DIR, "keys")
-# DID_PATH = os.path.join(DID_FOLDER, "student_did.json") # Questo non è più usato direttamente, il nome è dinamico
+
 
 class Student:
     """
     Rappresenta uno studente, gestendo la generazione di chiavi,
     documenti DID, la firma di messaggi e la generazione di presentazioni selettive.
     """
-    def __init__(self, username, password, first_name=None, last_name=None):
+    def __init__(self, username, password, user_id, first_name=None, last_name=None):
         """
         Inizializza l'oggetto Student.
         :param username: Username dello studente.
@@ -28,7 +28,8 @@ class Student:
         self.password = password
         self.first_name = first_name
         self.last_name = last_name
-        self.did = f"did:web:{username}.localhost" # DID dello studente
+        self.user_id = user_id
+        self.did = f"did:web:{username}.{user_id}.localhost"
         self.priv_path = os.path.join(KEYS_FOLDER, f"{username}_priv.pem")
         self.pub_path = os.path.join(KEYS_FOLDER, f"{username}_pub.pem")
 
