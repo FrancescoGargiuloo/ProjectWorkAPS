@@ -6,6 +6,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.exceptions import InvalidSignature
 
+from DatabaseManager import UserManager
 from Blockchain import Blockchain
 from RevocationRegistry import RevocationRegistry
 from MerkleTree import hash_leaf, merkle_root
@@ -18,16 +19,30 @@ os.makedirs(CREDENTIAL_FOLDER, exist_ok=True)
 os.makedirs(KEYS_FOLDER, exist_ok=True)
 os.makedirs(DID_FOLDER, exist_ok=True)
 
-DID_PATH = os.path.join(DID_FOLDER, "rennes_did.json")
+# DID_PATH is no longer strictly needed as a global, but kept for context if other parts use it.
+# The _update_did_document will now generate the path dynamically.
+DID_PATH = os.path.join(DID_FOLDER, "rennes_did.json")  # This global is now overridden by dynamic path generation
 EXAM = os.path.join(BASE_DIR, "exams.json")
 
+
 class UniversityRennes:
+    """
+    Rappresenta l'Università di Rennes, gestendo la generazione di chiavi,
+    documenti DID, la verifica di credenziali Erasmus, l'emissione di credenziali
+    accademiche e la raccolta dei dati degli esami.
+    """
+
     def __init__(self, did="did:web:rennes.it"):
+        """
+        Inizializza l'Università di Rennes.
+        :param did: Decentralized Identifier dell'università.
+        """
         self.did = did
         self.priv_path = os.path.join(KEYS_FOLDER, "rennes_priv.pem")
         self.pub_path = os.path.join(KEYS_FOLDER, "rennes_pub.pem")
         self.blockchain = Blockchain()
         self.revocation_registry = RevocationRegistry()
+        self.user_manager = UserManager(db_name="rennes_users")
 
         if not os.path.exists(self.priv_path):
             self._generate_keypair()
@@ -35,6 +50,10 @@ class UniversityRennes:
         self._update_did_document()
 
     def _generate_keypair(self):
+        """
+        Genera una coppia di chiavi RSA (privata e pubblica) per l'università di Rennes
+        e le salva in formato PEM.
+        """
         private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
         with open(self.priv_path, "wb") as f:
             f.write(private_key.private_bytes(
@@ -49,8 +68,17 @@ class UniversityRennes:
             ))
 
     def _update_did_document(self):
+        """
+        Aggiorna il documento DID dell'università di Rennes con la chiave pubblica generata.
+        Il documento DID viene salvato in un file JSON nella cartella DID.
+        Il nome del file è generato dinamicamente per corrispondere alla logica di resolve_did.
+        """
         with open(self.pub_path, "rb") as f:
             pub_pem = f.read().decode()
+
+        # Generate filename dynamically to match resolve_did logic
+        filename = self.did.split(":")[-1].replace(".", "_") + "_did.json"
+        path = os.path.join(DID_FOLDER, filename)
 
         did_doc = {
             "@context": "https://www.w3.org/ns/did/v1",
@@ -63,34 +91,43 @@ class UniversityRennes:
             }]
         }
 
-        with open(DID_PATH, "w") as f:
+        with open(path, "w") as f:  # Use the dynamically generated path
             json.dump(did_doc, f, indent=2)
 
     def resolve_did(self, did: str) -> dict:
         """
-        Finta risoluzione DID per esempio: cerca localmente un file DID nel filesystem.
+        Risolve un DID cercando il suo documento DID corrispondente nel filesystem locale.
+        :param did: Il DID da risolvere.
+        :return: Il documento DID come dizionario.
+        :raises Exception: Se il documento DID non viene trovato.
         """
         filename = did.split(":")[-1].replace(".", "_") + "_did.json"
-        path = os.path.join(DID_FOLDER, filename)  # Cartella dove le università si scambiano i DID document
+        path = os.path.join(DID_FOLDER, filename)
         if not os.path.exists(path):
             raise Exception(f"DID document non trovato per {did}")
         with open(path, "r") as f:
             return json.load(f)
 
     def verify_erasmus_credential(self, credential: dict) -> bool:
+        """
+        Verifica una credenziale Erasmus emessa da un'altra università (es. Salerno).
+        Controlla la firma della credenziale e il suo stato di revoca.
+        :param credential: La credenziale Erasmus da verificare.
+        :return: True se la credenziale è valida e non revocata, False altrimenti.
+        """
         issuer_did = credential.get("issuer")
         proof = credential.get("proof", {})
         jws = proof.get("jws")
         verification_method = proof.get("verificationMethod")
         status = credential.get("credentialStatus", {})
-        
-        # 1. Verifica che il DID sia trusted
+
+        # 1. Verifica che il DID dell'emittente sia trusted
         if issuer_did not in self.get_trusted_dids():
             print("❌ DID emittente non è nella lista trusted.")
             return False
 
         try:
-            # 2. Verifica della firma
+            # 2. Verifica della firma della credenziale
             did_doc = self.resolve_did(issuer_did)
             pub_key_pem = None
             for vm in did_doc.get("verificationMethod", []):
@@ -99,11 +136,12 @@ class UniversityRennes:
                     break
 
             if not pub_key_pem:
-                print("❌ verificationMethod non trovato.")
+                print("❌ verificationMethod non trovato nel DID dell'emittente.")
                 return False
 
             public_key = serialization.load_pem_public_key(pub_key_pem.encode())
 
+            # Ricostruisce la credenziale senza proof ed evidence per la verifica della firma
             unsigned_cred = credential.copy()
             unsigned_cred.pop("proof", None)
             unsigned_cred.pop("evidence", None)
@@ -118,7 +156,7 @@ class UniversityRennes:
                 ),
                 hashes.SHA256()
             )
-            print("✅ Firma valida.")
+            print("✅ Firma della credenziale Erasmus valida.")
 
             # 3. Verifica stato di revoca
             namespace = status.get("namespace")
@@ -137,21 +175,30 @@ class UniversityRennes:
                 return True
 
         except InvalidSignature:
-            print("❌ Firma non valida.")
+            print("❌ Firma della credenziale Erasmus non valida.")
             return False
         except Exception as e:
-            print(f"❌ Errore nella verifica: {e}")
+            print(f"❌ Errore nella verifica della credenziale Erasmus: {e}")
             return False
 
-
     def get_trusted_dids(self):
+        """
+        Restituisce una lista di DID di emittenti considerati affidabili da Rennes.
+        :return: Lista di stringhe DID.
+        """
         return ["did:web:unisa.it"]
 
     def generate_academic_credential(self, student, exams: list):
+        """
+        Genera una credenziale accademica per uno studente, basata sui suoi esami.
+        La credenziale include una Merkle Root degli esami firmata e registrata sulla blockchain.
+        :param student: L'oggetto studente per cui generare la credenziale.
+        :param exams: Una lista di dizionari, ognuno rappresentante un esame.
+        """
         issuance_date = datetime.utcnow().isoformat() + "Z"
         credential_id = f"urn:uuid:{student.username}-academic-cred"
 
-        # Genera foglie a livello di campo (coerente con selective disclosure)
+        # Genera foglie Merkle a livello di campo per ogni esame
         leaves = []
         for exam in exams:
             for field in ["name", "grade", "credits", "date"]:
@@ -160,10 +207,10 @@ class UniversityRennes:
                     h = hash_leaf(leaf_obj)
                     leaves.append(h)
 
-        # Calcola la Merkle Root
+        # Calcola la Merkle Root da tutte le foglie degli esami
         root = merkle_root(leaves)
 
-        # Firma la root
+        # Firma la Merkle Root con la chiave privata di Rennes
         priv_key = serialization.load_pem_private_key(open(self.priv_path, "rb").read(), password=None)
         jws_signature = base64.b64encode(priv_key.sign(
             root.encode(),
@@ -171,10 +218,10 @@ class UniversityRennes:
             hashes.SHA256()
         )).decode()
 
-        # Salva su blockchain
+        # Salva la Merkle Root e il DID dello studente sulla blockchain
         tx_hash = self.blockchain.add_block({"merkleRoot": root, "student": student.did})
 
-        # Costruisci la credenziale
+        # Costruisci la credenziale accademica
         credential = {
             "@context": [
                 "https://www.w3.org/2018/credentials/v1",
@@ -192,7 +239,7 @@ class UniversityRennes:
                 "givenName": student.first_name or "N/A",
                 "familyName": student.last_name or "N/A",
                 "homeUniversity": "Universita' di Salerno",
-                "exams": exams
+                "exams": exams  # Gli esami completi sono inclusi qui
             },
             "credentialStatus": {
                 "id": f"https://consorzio-univ.it/creds/{student.username}-academic-status",
@@ -223,17 +270,12 @@ class UniversityRennes:
 
         print(f"🎓 Academic Credential emessa e salvata: {filepath}")
 
-
     def collect_exam_data(self, file_path=EXAM):
         """
         Carica i dati degli esami da un file JSON.
-
-        Args:
-            file_path (str): Il percorso del file JSON da cui caricare i dati.
-
-        Returns:
-            list: Una lista di dizionari, ognuno rappresentante un esame.
-                  Ritorna una lista vuota se il file non esiste o è vuoto/non valido.
+        :param file_path (str): Il percorso del file JSON da cui caricare i dati.
+        :return: Una lista di dizionari, ognuno rappresentante un esame.
+                 Ritorna una lista vuota se il file non esiste o è vuoto/non valido.
         """
         if not os.path.exists(file_path):
             print(f"⚠️ Il file {file_path} non trovato. Restituisco lista esami vuota.")
