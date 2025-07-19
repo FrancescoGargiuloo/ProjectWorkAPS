@@ -1,5 +1,5 @@
 import os, json, base64
-from datetime import datetime
+from datetime import datetime, timezone
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.exceptions import InvalidSignature
@@ -118,7 +118,7 @@ class UniversityRennes(BaseUniversity):
         :param student: L'oggetto studente per cui generare la credenziale.
         :param exams: Una lista di dizionari, ognuno rappresentante un esame.
         """
-        issuance_date = datetime.utcnow().isoformat() + "Z"
+        issuance_date = datetime.now(timezone.utc).isoformat() + "Z"
         credential_id = f"urn:uuid:{student.username}-academic-cred"
 
         # Genera foglie Merkle a livello di campo per ogni esame

@@ -15,23 +15,37 @@ class BaseUniversity:
         self.revocation_registry = revocation_registry_cls()
         self._challenges = {}
 
-        if not os.path.exists(self.priv_path):
-            self._generate_keypair()
+        # Assicurati che le chiavi siano caricate/generate prima di tentare di usarle
+        self._private_key = None
+        self._public_key = None
+        self._load_or_generate_keypair()
+
         self._update_did_document()
 
-    def _generate_keypair(self):
-        private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-        with open(self.priv_path, "wb") as f:
-            f.write(private_key.private_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PrivateFormat.PKCS8,
-                encryption_algorithm=serialization.NoEncryption()
-            ))
-        with open(self.pub_path, "wb") as f:
-            f.write(private_key.public_key().public_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PublicFormat.SubjectPublicKeyInfo
-            ))
+    def _load_or_generate_keypair(self):  # Nuovo metodo
+        if os.path.exists(self.priv_path):
+            with open(self.priv_path, "rb") as f:
+                self._private_key = serialization.load_pem_private_key(
+                    f.read(),
+                    password=None  # In un'applicazione reale, proteggi la chiave con una password
+                )
+            self._public_key = self._private_key.public_key()
+            print(f"Chiavi per {self.did} caricate.")
+        else:
+            self._private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+            self._public_key = self._private_key.public_key()
+            with open(self.priv_path, "wb") as f:
+                f.write(self._private_key.private_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PrivateFormat.PKCS8,
+                    encryption_algorithm=serialization.NoEncryption()
+                ))
+            with open(self.pub_path, "wb") as f:
+                f.write(self._public_key.public_bytes(  # Usa self._public_key qui
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PublicFormat.SubjectPublicKeyInfo
+                ))
+            print(f"Chiavi per {self.did} generate e salvate.")
 
     def _update_did_document(self):
         with open(self.pub_path, "rb") as f:
@@ -121,3 +135,13 @@ class BaseUniversity:
         except Exception as e:
             del self._challenges[student_did]
             return {"status": "error", "message": f"Errore durante la verifica: {e}"}
+
+    # METODO AGGIUNTO QUI
+    def get_public_key(self):
+        """Restituisce la chiave pubblica dell'università in formato PEM."""
+        if self._public_key:
+            return self._public_key.public_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo
+            ).decode('utf-8')
+        return None

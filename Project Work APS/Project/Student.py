@@ -1,7 +1,7 @@
 import os, json, base64
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
-from datetime import datetime
+from datetime import datetime, timezone
 from MerkleTree import hash_leaf, build_merkle_proof # Assicurati che build_merkle_proof sia correttamente implementata in MerkleTree.py
 import uuid
 
@@ -277,7 +277,7 @@ class Student:
             pass # Non rimuoviamo la proof della VC qui, la VP firma la VC completa.
 
         nonce = base64.b64encode(os.urandom(16)).decode()
-        created = datetime.utcnow().isoformat() + "Z"
+        created = datetime.now(timezone.utc).isoformat() + "Z"
 
         # 6. Firma tutta la presentazione (senza il campo 'proof' della VP)
         # Il payload da firmare è la rappresentazione JSON canonica della VP senza la sua proof.

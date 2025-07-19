@@ -3,7 +3,7 @@ from DatabaseManager import UserManager
 from Blockchain import Blockchain
 from RevocationRegistry import RevocationRegistry
 import os, json, base64
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.exceptions import InvalidSignature
@@ -34,8 +34,8 @@ class UniversitySalerno(BaseUniversity):
         La credenziale viene firmata e il suo hash registrato sulla blockchain.
         :param student: L'oggetto studente per cui generare la credenziale.
         """
-        issuance_date = datetime.utcnow().isoformat() + "Z"
-        expiration_date = (datetime.utcnow() + timedelta(days=365)).isoformat() + "Z"
+        issuance_date = datetime.now(timezone.utc).isoformat() + "Z"
+        expiration_date = (datetime.now(timezone.utc) + timedelta(days=365)).isoformat() + "Z"
 
         credential_id = f"urn:uuid:{student.username}-erasmus-cred"
         revocation_namespace = "unisa"

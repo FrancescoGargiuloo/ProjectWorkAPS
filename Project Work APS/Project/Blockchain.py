@@ -1,14 +1,14 @@
 import hashlib
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 BLOCKCHAIN_FILE = os.path.join(os.path.dirname(__file__), "shared_blockchain.json")
 
 class Block:
     def __init__(self, index, previous_hash, data, timestamp=None):
         self.index = index
-        self.timestamp = timestamp or datetime.utcnow().isoformat()
+        self.timestamp = timestamp or datetime.now(timezone.utc).isoformat()
         self.data = data
         self.previous_hash = previous_hash
         self.hash = self.calculate_hash()
