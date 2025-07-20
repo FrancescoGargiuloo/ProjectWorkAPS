@@ -53,7 +53,7 @@ class Blockchain:
             except Exception as e:
                 print(f"⚠️ Errore durante il caricamento della blockchain: {e}")
                 print("❗ Non sovrascrivo il file. Crea manualmente backup o correggi il file JSON.")
-                raise e  # o return []
+                raise e
         else:
             # se il file non esiste, crea la genesis chain
             genesis = self._create_genesis_block()
