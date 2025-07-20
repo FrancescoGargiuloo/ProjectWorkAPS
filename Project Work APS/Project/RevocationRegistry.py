@@ -1,17 +1,19 @@
 import hashlib
+import json
+import os
 from typing import Dict
 
+BASE_DIR = os.path.dirname(__file__)
+REGISTRY_FILE = os.path.join(BASE_DIR, "revocation_registry.json")
+
 class RevocationRegistry:
-    """
-    Simula uno Smart Contract condiviso su blockchain, come singleton globale.
-    Gestisce namespace -> revocationList -> revocationKey -> bool (revocato?)
-    """
     _instance = None
 
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._registry = {}  # type: Dict[str, Dict[str, Dict[str, bool]]]
+            cls._instance.load_from_file(REGISTRY_FILE)
         return cls._instance
 
     def generate_list_id(self, namespace: str, category_id: str) -> str:
@@ -22,25 +24,38 @@ class RevocationRegistry:
         return hashlib.sha256(credential_id.encode()).hexdigest()
 
     def create_revocation_entry(self, namespace: str, list_id: str, revocation_key: str):
-        """Inizializza l'entry a False (non revocata)"""
         ns = self._registry.setdefault(namespace, {})
         rev_list = ns.setdefault(list_id, {})
         if revocation_key not in rev_list:
             rev_list[revocation_key] = False
+            self.save_to_file(REGISTRY_FILE)
 
     def revoke(self, namespace: str, list_id: str, revocation_key: str) -> bool:
-        """Marca una credenziale come revocata"""
         try:
             self._registry[namespace][list_id][revocation_key] = True
+            self.save_to_file(REGISTRY_FILE)
             return True
         except KeyError:
             return False
 
     def is_revoked(self, namespace: str, list_id: str, revocation_key: str) -> bool:
-        """Restituisce True se la VC è revocata, False se non lo è, None se non esiste"""
         return self._registry.get(namespace, {}).get(list_id, {}).get(revocation_key)
 
+    def save_to_file(self, filepath: str):
+        with open(filepath, "w") as f:
+            json.dump(self._registry, f, indent=2)
+
+    def load_from_file(self, filepath: str):
+        if os.path.exists(filepath):
+            try:
+                with open(filepath, "r") as f:
+                    self._registry = json.load(f)
+            except json.JSONDecodeError:
+                print("⚠️ File JSON corrotto, inizializzo registro vuoto.")
+                self._registry = {}
+        else:
+            self._registry = {}
+
     def debug_print(self):
-        """Stampa lo stato interno (debug)"""
         import pprint
         pprint.pprint(self._registry)
