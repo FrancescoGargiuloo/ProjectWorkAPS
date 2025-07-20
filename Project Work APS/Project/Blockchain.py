@@ -35,6 +35,8 @@ class Block:
 class Blockchain:
     def __init__(self):
         self.chain = self._load_chain()
+        if not self.is_chain_valid():
+            raise Exception("❌ Blockchain corrotta o manomessa.")
 
     def _create_genesis_block(self):
         return Block(0, "0", {"message": "Genesis Block"})
@@ -70,6 +72,10 @@ class Blockchain:
 
     def add_block(self, data):
         self.chain = self._load_chain()
+
+        if not self.is_chain_valid():
+            raise Exception("❌ Impossibile aggiungere blocchi a una catena non valida.")
+
         latest = self.get_latest_block()
         new_block = Block(index=latest.index + 1, previous_hash=latest.hash, data=data)
         self.chain.append(new_block)
@@ -95,3 +101,26 @@ class Blockchain:
                     return None
         print("❌ Blocco con hash specificato non trovato.")
         return None
+
+    def is_chain_valid(self):
+        """
+        Verifica che la catena sia valida:
+        - ogni blocco punta al precedente con un hash corretto
+        - ogni blocco ha un hash valido rispetto al suo contenuto
+        """
+        for i in range(1, len(self.chain)):
+            current = self.chain[i]
+            previous = self.chain[i - 1]
+
+            # Verifica che l'hash calcolato corrisponda
+            if current.hash != current.calculate_hash():
+                print(f"❌ Hash del blocco {i} non valido.")
+                return False
+
+            # Verifica che il blocco punti correttamente al precedente
+            if current.previous_hash != previous.hash:
+                print(f"❌ Hash del blocco precedente errato al blocco {i}.")
+                return False
+
+        print("✅ La blockchain è valida.")
+        return True
