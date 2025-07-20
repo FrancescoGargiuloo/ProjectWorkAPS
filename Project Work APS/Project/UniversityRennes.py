@@ -63,10 +63,9 @@ class UniversityRennes(BaseUniversity):
 
             public_key = serialization.load_pem_public_key(pub_key_pem.encode())
 
-            # Ricostruisce la credenziale senza proof ed evidence per la verifica della firma
+            # Ricostruisce la credenziale senza proof per la verifica della firma
             unsigned_cred = credential.copy()
             unsigned_cred.pop("proof", None)
-            unsigned_cred.pop("evidence", None)
             payload = json.dumps(unsigned_cred, sort_keys=True).encode()
 
             public_key.verify(

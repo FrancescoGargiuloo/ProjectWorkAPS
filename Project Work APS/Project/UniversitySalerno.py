@@ -70,20 +70,6 @@ class UniversitySalerno(BaseUniversity):
                 "revocationKey": revocation_key
             }
         }
-        priv_key = serialization.load_pem_private_key(open(self.priv_path, "rb").read(), password=None)
-        signature = base64.b64encode(priv_key.sign(
-            json.dumps(credential_data, sort_keys=True).encode(),
-            padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH),
-            hashes.SHA256()
-        )).decode()
-
-        credential_data["proof"] = {
-            "type": "RsaSignature2023",
-            "created": issuance_date,
-            "proofPurpose": "assertionMethod",
-            "verificationMethod": f"{self.did}#key-1",
-            "jws": signature
-        }
 
         vc_hash = hashlib.sha256(json.dumps(credential_data, sort_keys=True).encode()).hexdigest()
 
@@ -100,6 +86,22 @@ class UniversitySalerno(BaseUniversity):
             "transactionHash": tx_hash,
             "network": "ConsorzioReteUniversitaria"
         }
+
+        priv_key = serialization.load_pem_private_key(open(self.priv_path, "rb").read(), password=None)
+        signature = base64.b64encode(priv_key.sign(
+            json.dumps(credential_data, sort_keys=True).encode(),
+            padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH),
+            hashes.SHA256()
+        )).decode()
+
+        credential_data["proof"] = {
+            "type": "RsaSignature2023",
+            "created": issuance_date,
+            "proofPurpose": "assertionMethod",
+            "verificationMethod": f"{self.did}#key-1",
+            "jws": signature
+        }
+        
         self.revocation_registry.create_revocation_entry(
             namespace=revocation_namespace,
             list_id=revocation_list_id,
