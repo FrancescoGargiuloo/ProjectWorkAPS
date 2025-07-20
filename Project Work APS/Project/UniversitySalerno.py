@@ -192,7 +192,7 @@ class UniversitySalerno(BaseUniversity):
                 else:
                     print("✅ La credenziale è ancora valida temporalmente.")
             else:
-                print("ℹ️ Nessuna data di scadenza specificata per questa credenziale nella presentazione.")
+                print("Nessuna data di scadenza specificata per questa credenziale nella presentazione.")
             # --- Fine del controllo di validità temporale ---
 
 
