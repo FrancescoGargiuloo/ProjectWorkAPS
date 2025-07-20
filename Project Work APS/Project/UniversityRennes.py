@@ -151,7 +151,10 @@ class UniversityRennes(BaseUniversity):
         issuance_date = datetime.now(timezone.utc).isoformat() + "Z"
         expiration_date = (datetime.now(timezone.utc) + timedelta(days=365)).isoformat() + "Z"
         credential_id = f"urn:uuid:{student.username}-academic-cred"
-
+        revocation_namespace = "rennes"
+        category_id = "anno2025"
+        revocation_list_id = self.revocation_registry.generate_list_id(revocation_namespace, category_id)
+        revocation_key = self.revocation_registry.generate_revocation_key(credential_id)
         # Genera foglie Merkle a livello di campo per ogni esame
         leaves = []
         for exam in exams:
@@ -200,9 +203,9 @@ class UniversityRennes(BaseUniversity):
                 "id": f"https://consorzio-univ.it/creds/{student.username}-academic-status",
                 "type": "ConsortiumRevocationRegistry2024",
                 "registry": "0xRegistryAddresRennes",
-                "namespace": "0x9876543210FEDCBA09876543210FEDCBA0987654",
-                "revocationList": "0x456789ABCDEF456789ABCDEF456789ABCDEF1234",
-                "revocationKey": self.revocation_registry.generate_revocation_key(credential_id)
+                "namespace": revocation_namespace,
+                "revocationList": revocation_list_id,
+                "revocationKey": revocation_key
             },
             "evidence": {
                 "type": "BlockchainRecord",
@@ -219,6 +222,12 @@ class UniversityRennes(BaseUniversity):
             }
         }
 
+        self.revocation_registry.create_revocation_entry(
+            namespace=revocation_namespace,
+            list_id=revocation_list_id,
+            revocation_key=revocation_key
+        )
+        
         filepath = os.path.join(CREDENTIAL_FOLDER, f"{student.username}_academic_credential.json")
         with open(filepath, "w") as f:
             json.dump(credential, f, indent=2)
