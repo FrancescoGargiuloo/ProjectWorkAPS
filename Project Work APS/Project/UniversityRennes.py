@@ -1,5 +1,5 @@
 import os, json, base64
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta # Aggiunto timedelta
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.exceptions import InvalidSignature
@@ -33,7 +33,7 @@ class UniversityRennes(BaseUniversity):
     def verify_erasmus_credential(self, credential: dict) -> bool:
         """
         Verifica una credenziale Erasmus emessa da un'altra università (es. Salerno).
-        Controlla la firma della credenziale e il suo stato di revoca.
+        Controlla la firma della credenziale, il suo stato di revoca e la validità temporale.
         :param credential: La credenziale Erasmus da verificare.
         :return: True se la credenziale è valida e non revocata, False altrimenti.
         """
@@ -80,6 +80,36 @@ class UniversityRennes(BaseUniversity):
             )
             print("✅ Firma della credenziale Erasmus valida.")
 
+            # --- Inizio del controllo di validità temporale (aggiunto) ---
+            expiration_str = credential.get("expirationDate")
+            if expiration_str:
+                try:
+                    # Tenta di parsare direttamente
+                    expiration_date = datetime.fromisoformat(expiration_str)
+                except ValueError:
+                    # Se fallisce, prova a rimuovere la 'Z' finale e a riprovare
+                    try:
+                        if expiration_str.endswith('Z'):
+                            expiration_date = datetime.fromisoformat(expiration_str[:-1])
+                        else:
+                            raise  # Rilancia se non è una Z finale il problema
+                    except ValueError:
+                        print(f"❌ Formato data di scadenza non valido: {expiration_str}. Processo interrotto.")
+                        return False  # Interrompi se il formato è invalido
+
+                now = datetime.now(tz=timezone.utc)
+                if expiration_date.tzinfo is None:  # Se la data parsata non ha info sul fuso orario, assumi UTC
+                    expiration_date = expiration_date.replace(tzinfo=timezone.utc)
+
+                if now > expiration_date:
+                    print("❌ La credenziale è scaduta. Processo interrotto.")
+                    return False  # Interrompi qui
+                else:
+                    print("✅ La credenziale è ancora valida temporalmente.")
+            else:
+                print("ℹ️ Nessuna data di scadenza specificata per questa credenziale.")
+            # --- Fine del controllo di validità temporale ---
+
             # 3. Verifica stato di revoca
             namespace = status.get("namespace")
             revocation_list = status.get("revocationList")
@@ -94,7 +124,7 @@ class UniversityRennes(BaseUniversity):
                 return False
             else:
                 print("✅ Credenziale NON revocata.")
-                return True
+                return True # Restituisci True se tutte le validazioni passano
 
         except InvalidSignature:
             print("❌ Firma della credenziale Erasmus non valida.")
@@ -119,6 +149,7 @@ class UniversityRennes(BaseUniversity):
         :param exams: Una lista di dizionari, ognuno rappresentante un esame.
         """
         issuance_date = datetime.now(timezone.utc).isoformat() + "Z"
+        expiration_date = (datetime.now(timezone.utc) + timedelta(days=365)).isoformat() + "Z"
         credential_id = f"urn:uuid:{student.username}-academic-cred"
 
         # Genera foglie Merkle a livello di campo per ogni esame
@@ -153,6 +184,7 @@ class UniversityRennes(BaseUniversity):
             "type": ["VerifiableCredential", "AcademicCredential"],
             "issuer": self.did,
             "issuanceDate": issuance_date,
+            "expirationDate": expiration_date, # Aggiunto il campo expirationDate
             "credentialSchema": {
                 "id": "https://consorzio.example/schema/academic-v1",
                 "type": "JsonSchema"

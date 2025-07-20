@@ -9,6 +9,7 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.exceptions import InvalidSignature
 import hashlib
 from MerkleTree import hash_leaf, verify_merkle_proof, reconstruct_merkle_root
+
 BASE_DIR = os.path.dirname(__file__)
 CREDENTIAL_FOLDER = os.path.join(BASE_DIR, "credential")
 
@@ -26,7 +27,6 @@ class UniversitySalerno(BaseUniversity):
             blockchain_cls=Blockchain,
             revocation_registry_cls=RevocationRegistry
         )
-
 
     def generate_erasmus_credential(self, student):
         """
@@ -164,6 +164,37 @@ class UniversitySalerno(BaseUniversity):
 
             # 4. Estrai la VC dalla presentazione
             vc = presentation["verifiableCredential"]
+
+            # --- Inizio del controllo di validità temporale (aggiunto) ---
+            expiration_str = vc.get("expirationDate")
+            if expiration_str:
+                try:
+                    # Tenta di parsare direttamente
+                    expiration_date = datetime.fromisoformat(expiration_str)
+                except ValueError:
+                    # Se fallisce, prova a rimuovere la 'Z' finale e a riprovare
+                    try:
+                        if expiration_str.endswith('Z'):
+                            expiration_date = datetime.fromisoformat(expiration_str[:-1])
+                        else:
+                            raise  # Rilancia se non è una Z finale il problema
+                    except ValueError:
+                        print(f"❌ Formato data di scadenza non valido: {expiration_str}. Processo interrotto.")
+                        return False  # Interrompi se il formato è invalido
+
+                now = datetime.now(tz=timezone.utc)
+                if expiration_date.tzinfo is None:  # Se la data parsata non ha info sul fuso orario, assumi UTC
+                    expiration_date = expiration_date.replace(tzinfo=timezone.utc)
+
+                if now > expiration_date:
+                    print("❌ La credenziale è scaduta. Processo interrotto.")
+                    return False  # Interrompi qui
+                else:
+                    print("✅ La credenziale è ancora valida temporalmente.")
+            else:
+                print("ℹ️ Nessuna data di scadenza specificata per questa credenziale nella presentazione.")
+            # --- Fine del controllo di validità temporale ---
+
 
             # 5. Recupera la Merkle Root dalla blockchain
             tx_hash = vc["evidence"]["transactionHash"]
