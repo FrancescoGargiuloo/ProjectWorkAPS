@@ -5,17 +5,9 @@ import uuid
 from Student import Student
 from UniversitySalerno import UniversitySalerno
 from UniversityRennes import UniversityRennes
-
+import shutil
 # Qui definisco le cartelle dove verranno salvati i file di database, chiavi, credenziali e DIDs
 BASE_DIR = os.path.dirname(__file__)
-DB_FOLDER = os.path.join(BASE_DIR, "database")
-KEY_FOLDER = os.path.join(BASE_DIR, "keys")
-DID_FOLDER = os.path.join(BASE_DIR, "DID")
-
-# Creo le cartelle, se non esistono già (così evito errori dopo)
-os.makedirs(DB_FOLDER, exist_ok=True)
-os.makedirs(KEY_FOLDER, exist_ok=True)
-os.makedirs(DID_FOLDER, exist_ok=True)
 
 # Questa lista mi serve per sapere quali studenti ho registrato, utile per fare la pulizia finale
 REGISTERED_STUDENTS_FOR_CLEANUP = []
@@ -38,39 +30,33 @@ def cleanup_all_data():
     print("==== FASE DI PULIZIA DATI ====")
     print("=" * 50)
 
-    # Cancello database degli studenti
-    _delete_file_if_exists(os.path.join(DB_FOLDER, "unisa_users.json"))
-    _delete_file_if_exists(os.path.join(DB_FOLDER, "rennes_users.json"))
+    # Percorsi per pulizia Unisa
+    UNISA_DIR = os.path.join(BASE_DIR, "unisa")
+    _delete_file_if_exists(os.path.join(UNISA_DIR, "keys", "unisa_priv.pem"))
+    _delete_file_if_exists(os.path.join(UNISA_DIR, "keys", "unisa_pub.pem"))
+    _delete_file_if_exists(os.path.join(UNISA_DIR, "DID", "unisa_did.json"))
 
-    # Cancello registro revoche e blockchain simulata
-    _delete_file_if_exists(os.path.join(BASE_DIR, "revocation_registry.json"))
-    _delete_file_if_exists(os.path.join(BASE_DIR, "shared_blockchain.json"))
-
-    # Cancello le chiavi di cifratura dei database (se ci sono)
-    _delete_file_if_exists(os.path.join(KEY_FOLDER, "unisa_users_encryption.key"))
-    _delete_file_if_exists(os.path.join(KEY_FOLDER, "rennes_users_encryption.key"))
-
-    # Cancello chiavi e DIDs delle università
-    _delete_file_if_exists(os.path.join(KEY_FOLDER, "unisa_priv.pem"))
-    _delete_file_if_exists(os.path.join(KEY_FOLDER, "unisa_pub.pem"))
-    _delete_file_if_exists(os.path.join(DID_FOLDER, "unisa_it_did.json"))
-
-    _delete_file_if_exists(os.path.join(KEY_FOLDER, "rennes_priv.pem"))
-    _delete_file_if_exists(os.path.join(KEY_FOLDER, "rennes_pub.pem"))
-    _delete_file_if_exists(os.path.join(DID_FOLDER, "rennes_it_did.json"))
+    # Percorsi per pulizia Rennes
+    RENNES_DIR = os.path.join(BASE_DIR, "rennes")
+    _delete_file_if_exists(os.path.join(RENNES_DIR, "keys", "rennes_priv.pem"))
+    _delete_file_if_exists(os.path.join(RENNES_DIR, "keys", "rennes_pub.pem"))
+    _delete_file_if_exists(os.path.join(RENNES_DIR, "DID", "rennes_did.json"))
 
     # Cancello tutto quello che riguarda gli studenti registrati
     for student_data in REGISTERED_STUDENTS_FOR_CLEANUP:
         username = student_data["username"]
         user_id = student_data["user_id"]
 
+        wallet_folder = os.path.join(BASE_DIR, f"wallet-{username}")
+
         # Cancello chiavi dello studente
-        _delete_file_if_exists(os.path.join(KEY_FOLDER, f"{username}_priv.pem"))
-        _delete_file_if_exists(os.path.join(KEY_FOLDER, f"{username}_pub.pem"))
+        _delete_file_if_exists(os.path.join(wallet_folder, "keys", f"{username}_priv.pem"))
+        _delete_file_if_exists(os.path.join(wallet_folder, "keys", f"{username}_pub.pem"))
 
         # Cancello il file DID dello studente
-        did_filename = f"{username.replace('.', '_')}_{user_id}_localhost_did.json"
-        _delete_file_if_exists(os.path.join(DID_FOLDER, did_filename))
+        for file in os.listdir(os.path.join(wallet_folder, "did")):
+            if file.endswith("_did.json"):
+                _delete_file_if_exists(os.path.join(wallet_folder, "did", file))
 
     print("\n✅ Pulizia completata.")
     print("=" * 50)
@@ -87,8 +73,29 @@ def phase_0_initialization():
     salerno_university = UniversitySalerno()
     rennes_university = UniversityRennes()
     print("✅ Università inizializzate correttamente.")
+    universities = [salerno_university, rennes_university]
+    distribute_dids_among_trusted_folders(universities)
     return salerno_university, rennes_university
 
+def distribute_dids_among_trusted_folders(universities):
+    """
+    Per ogni università, copia i DID delle altre università nella sua cartella trusted_did_folder.
+    """
+    for uni_target in universities:
+        # Assicuriamoci che la cartella trusted_did_folder esista
+        os.makedirs(uni_target.trusted_did_folder, exist_ok=True)
+
+        for uni_source in universities:
+            if uni_source == uni_target:
+                continue  # Non copiare i propri DID nella trusted di sé stessi
+
+            # Lista dei DID nella did_folder della uni_source
+            did_files = [f for f in os.listdir(uni_source.did_folder) if f.endswith("_did.json")]
+
+            for did_file in did_files:
+                src = os.path.join(uni_source.did_folder, did_file)
+                dst = os.path.join(uni_target.trusted_did_folder, did_file)
+                shutil.copy2(src, dst)
 
 # --- FASE 1: Creazione e registrazione degli studenti ---
 def phase_1_student_creation(university_salerno, university_rennes):

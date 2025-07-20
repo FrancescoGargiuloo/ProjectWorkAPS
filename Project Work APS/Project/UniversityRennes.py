@@ -11,6 +11,7 @@ from RevocationRegistry import RevocationRegistry
 from MerkleTree import hash_leaf, merkle_root
 
 BASE_DIR = os.path.dirname(__file__)
+RENNES_DIR = os.path.join(BASE_DIR, "rennes")
 EXAM = os.path.join(BASE_DIR, "exams.json")
 
 
@@ -21,11 +22,13 @@ class UniversityRennes(BaseUniversity):
             priv_key_filename="rennes_priv.pem",
             pub_key_filename="rennes_pub.pem",
             db_name="rennes_users",
-            keys_folder=os.path.join(BASE_DIR, "keys"),
-            did_folder=os.path.join(BASE_DIR, "DID"),
+            keys_folder=os.path.join(RENNES_DIR, "keys"),
+            did_folder=os.path.join(RENNES_DIR, "did"),
+            trusted_did_folder = os.path.join(RENNES_DIR, "trusted_dids"),
             user_manager_cls=UserManager,
             blockchain_cls=Blockchain,
-            revocation_registry_cls=RevocationRegistry
+            revocation_registry_cls=RevocationRegistry,
+            folder=RENNES_DIR
         )
 
     def verify_erasmus_credential(self, credential: dict) -> bool:

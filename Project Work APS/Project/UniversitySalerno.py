@@ -11,6 +11,7 @@ import hashlib
 from MerkleTree import hash_leaf, verify_merkle_proof, reconstruct_merkle_root
 
 BASE_DIR = os.path.dirname(__file__)
+UNISA_DIR = os.path.join(BASE_DIR, "unisa")
 
 
 class UniversitySalerno(BaseUniversity):
@@ -20,11 +21,13 @@ class UniversitySalerno(BaseUniversity):
             priv_key_filename="unisa_priv.pem",
             pub_key_filename="unisa_pub.pem",
             db_name="unisa_users",
-            keys_folder=os.path.join(BASE_DIR, "keys"),
-            did_folder=os.path.join(BASE_DIR, "DID"),
+            keys_folder=os.path.join(UNISA_DIR, "keys"),
+            did_folder=os.path.join(UNISA_DIR, "did"),
+            trusted_did_folder = os.path.join(UNISA_DIR, "trusted_dids"),
             user_manager_cls=UserManager,
             blockchain_cls=Blockchain,
-            revocation_registry_cls=RevocationRegistry
+            revocation_registry_cls=RevocationRegistry,
+            folder = UNISA_DIR
         )
 
     def generate_erasmus_credential(self, student):
