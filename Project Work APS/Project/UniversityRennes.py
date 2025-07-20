@@ -174,10 +174,13 @@ class UniversityRennes(BaseUniversity):
             padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH),
             hashes.SHA256()
         )).decode()
-
-        # Salva la Merkle Root e il DID dello studente sulla blockchain
-        tx_hash = self.blockchain.add_block({"merkleRoot": root, "student": student.did})
-
+        # Registra la Merkle Root sulla blockchain
+        tx_hash = self.blockchain.add_block({
+                    "merkleRoot": root,
+                    "type": "AcademicCredential",
+                    "studentDID": student.did,
+                    "issuer": self.did
+                })
         # Costruisci la credenziale accademica
         credential = {
             "@context": [
