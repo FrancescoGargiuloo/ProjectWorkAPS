@@ -272,7 +272,7 @@ class UniversityRennes(BaseUniversity):
         if namespace and list_id and rev_key:
             success = self.revocation_registry.revoke(namespace, list_id, rev_key)
             if success:
-                print(f"✅ Credenziale accademica revocata correttamente da Rennes (list_id: {list_id}).")
+                print(f"✅ Credenziale accademica revocata correttamente da Rennes.")
             else:
                 print("❌ Errore nella revoca: chiavi non valide o non presenti.")
         else:
