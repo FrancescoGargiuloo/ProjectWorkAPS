@@ -10,13 +10,11 @@ from UniversityRennes import UniversityRennes
 BASE_DIR = os.path.dirname(__file__)
 DB_FOLDER = os.path.join(BASE_DIR, "database")
 KEY_FOLDER = os.path.join(BASE_DIR, "keys")
-CRED_FOLDER = os.path.join(BASE_DIR, "credential")
 DID_FOLDER = os.path.join(BASE_DIR, "DID")
 
 # Creo le cartelle, se non esistono già (così evito errori dopo)
 os.makedirs(DB_FOLDER, exist_ok=True)
 os.makedirs(KEY_FOLDER, exist_ok=True)
-os.makedirs(CRED_FOLDER, exist_ok=True)
 os.makedirs(DID_FOLDER, exist_ok=True)
 
 # Questa lista mi serve per sapere quali studenti ho registrato, utile per fare la pulizia finale
@@ -73,15 +71,6 @@ def cleanup_all_data():
         # Cancello il file DID dello studente
         did_filename = f"{username.replace('.', '_')}_{user_id}_localhost_did.json"
         _delete_file_if_exists(os.path.join(DID_FOLDER, did_filename))
-
-        # Cancello credenziali Erasmus e accademiche
-        _delete_file_if_exists(os.path.join(CRED_FOLDER, f"{username}_erasmus_credential.json"))
-        _delete_file_if_exists(os.path.join(CRED_FOLDER, f"{username}_academic_credential.json"))
-        _delete_file_if_exists(os.path.join(CRED_FOLDER, f"{username}_vp.json"))
-
-        # Cancello anche eventuali credenziali revocate
-        _delete_file_if_exists(os.path.join(CRED_FOLDER, f"{username}_revoked_erasmus_credential.json"))
-        _delete_file_if_exists(os.path.join(CRED_FOLDER, f"{username}_revoked_academic_credential.json"))
 
     print("\n✅ Pulizia completata.")
     print("=" * 50)
@@ -269,7 +258,7 @@ def phase_5_selective_presentation(authenticated_students, university_salerno, u
             student.generate_selective_presentation_automated(university_salerno.did)
             print("✅ Presentazione generata")
 
-            with open(os.path.join(CRED_FOLDER, f"{student.username}_vp.json")) as f:
+            with open(os.path.join(student.get_wallet_path(),"credentials", f"{student.username}_vp.json")) as f:
                 presentation = json.load(f)
             if student == authenticated_students[1]:
                 presentation1 = presentation

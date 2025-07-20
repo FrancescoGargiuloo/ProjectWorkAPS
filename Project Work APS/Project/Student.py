@@ -30,14 +30,20 @@ class Student:
         self.last_name = last_name
         self.user_id = user_id
         self.did = f"did:web:{username}.{user_id}.localhost"
-        self.priv_path = os.path.join(KEYS_FOLDER, f"{username}_priv.pem")
-        self.pub_path = os.path.join(KEYS_FOLDER, f"{username}_pub.pem")
-        self._trusted_dids = self.get_trusted_did()
 
-        # Assicurati che le cartelle esistano
-        os.makedirs(KEYS_FOLDER, exist_ok=True)
-        os.makedirs(DID_FOLDER, exist_ok=True)
-        os.makedirs(CREDENTIAL_FOLDER, exist_ok=True)
+        # Directory dedicata per ogni studente
+        self.wallet_dir = os.path.join(BASE_DIR, f"wallet-{username}")
+        self.keys_dir = os.path.join(self.wallet_dir, "keys")
+        self.did_dir = os.path.join(self.wallet_dir, "did")
+        self.credential_dir = os.path.join(self.wallet_dir, "credentials")
+
+        os.makedirs(self.keys_dir, exist_ok=True)
+        os.makedirs(self.did_dir, exist_ok=True)
+        os.makedirs(self.credential_dir, exist_ok=True)
+
+        self.priv_path = os.path.join(self.keys_dir, f"{username}_priv.pem")
+        self.pub_path = os.path.join(self.keys_dir, f"{username}_pub.pem")
+        self._trusted_dids = self.get_trusted_did()
 
         if not os.path.exists(self.priv_path):
             self._generate_keypair()
@@ -92,7 +98,7 @@ class Student:
             }]
         }
         filename = self.did.split(":")[-1].replace(".", "_") + "_did.json"
-        path = os.path.join(DID_FOLDER, filename)
+        path = os.path.join(self.did_dir, filename)
         with open(path, "w") as f:
             json.dump(did_doc, f, indent=2)
         print(f"Documento DID per {self.username} salvato in {path}")
@@ -132,7 +138,7 @@ class Student:
         Carica la credenziale Erasmus dallo storage locale dello studente.
         :return: La credenziale Erasmus come dizionario, o None se non trovata/errore.
         """
-        path = os.path.join(CREDENTIAL_FOLDER, f"{self.username}_erasmus_credential.json")
+        path = os.path.join(self.credential_dir, f"{self.username}_erasmus_credential.json")
         try:
             with open(path, "r") as f:
                 return json.load(f)
@@ -148,7 +154,7 @@ class Student:
         Carica la credenziale Accademica dallo storage locale dello studente.
         :return: La credenziale Accademica come dizionario, o None se non trovata/errore.
         """
-        path = os.path.join(CREDENTIAL_FOLDER, f"{self.username}_academic_credential.json")
+        path = os.path.join(self.credential_dir, f"{self.username}_academic_credential.json")
         try:
             with open(path, "r") as f:
                 return json.load(f)
@@ -297,9 +303,16 @@ class Student:
             "jws": signature
         }
 
-        output_path = os.path.join(CREDENTIAL_FOLDER, f"{self.username}_vp.json")
+        output_path = os.path.join(self.credential_dir, f"{self.username}_vp.json")
         with open(output_path, "w") as f:
             json.dump(vp, f, indent=2)
 
         print(f"\n✅ Verifiable Presentation salvata in: {output_path}")
         return vp
+    
+    def get_wallet_path(self):
+        """
+        Restituisce il percorso della cartella wallet dello studente.
+        """
+        return self.wallet_dir
+    

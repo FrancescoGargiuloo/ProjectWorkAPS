@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.exceptions import InvalidSignature
-
+BASE_DIR = os.path.dirname(__file__)
 class BaseUniversity:
     def __init__(self, did, priv_key_filename, pub_key_filename, db_name, keys_folder, did_folder, user_manager_cls, blockchain_cls, revocation_registry_cls):
         self.did = did
@@ -66,6 +66,46 @@ class BaseUniversity:
         with open(path, "w") as f:
             json.dump(did_doc, f, indent=2)
 
+    def resolve_did_student(self, did: str) -> dict:
+        did_part = did.split(":")[-1]  
+        # did_part: "mario.rossi.79a81b97-64ee-44fd-86d1-f9eece5af97f.localhost"
+        
+        # Trova la posizione del primo underscore (_) o se non c’è, prendiamo tutto fino al primo underscore
+        # Qui non c’è underscore, ma devi separare la parte nome.cognome dalla parte ID
+        # Quindi splitto per il primo '_' (se c'è) altrimenti devo usare il primo token UUID
+        
+        # Invece qui il separatore tra nome.cognome e id è il primo underscore? No, non c’è underscore,
+        # ma il separatore tra nome.cognome e UUID è il primo punto dopo nome.cognome?
+
+        # Qui il nome.cognome è "mario.rossi", poi c’è un punto, e poi l’UUID "79a81b97-64ee-44fd-86d1-f9eece5af97f.localhost"
+        # Quindi posso fare così:
+        
+        # 1) Split per UUID (cerca il primo token che sembra UUID, ovvero un token lungo e con trattini)
+        # Ma più semplice: la cartella wallet è tutto fino al primo token UUID (quindi i primi due token con punto)
+        # possiamo fare uno split per '.' e se i primi due token sono nome e cognome, e poi il resto è UUID + "localhost"
+
+        # Quindi splitto per '.' e prendo i primi due pezzi come username
+        parts = did_part.split(".")
+        if len(parts) < 3:
+            raise Exception(f"DID non conforme, impossibile estrarre nome_cognome da {did}")
+
+        username = parts[0] + "." + parts[1]  # es: "mario.rossi"
+
+        # Cartella wallet per l’utente
+        wallet_folder = os.path.join(BASE_DIR, f"wallet-{username}")
+
+        # Ora il filename deve essere did_part con '.' sostituiti da '_' più _did.json
+        filename = did_part.replace(".", "_") + "_did.json"
+
+        did_path = os.path.join(wallet_folder, "did", filename)
+
+        if not os.path.exists(did_path):
+            raise Exception(f"DID document non trovato per {did} nel path {did_path}")
+
+        with open(did_path, "r") as f:
+            return json.load(f)
+
+        
     def resolve_did(self, did: str) -> dict:
         filename = did.split(":")[-1].replace(".", "_") + "_did.json"
         path = os.path.join(self.did_folder, filename)
@@ -73,7 +113,7 @@ class BaseUniversity:
             raise Exception(f"DID document non trovato per {did}")
         with open(path, "r") as f:
             return json.load(f)
-
+        
     def register_student(self, user_id, username, password, first_name, last_name, public_key_pem):
         success = self.user_manager.first_login(user_id, username, password, first_name, last_name)
         if success:

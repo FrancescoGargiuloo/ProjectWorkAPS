@@ -11,8 +11,6 @@ from RevocationRegistry import RevocationRegistry
 from MerkleTree import hash_leaf, merkle_root
 
 BASE_DIR = os.path.dirname(__file__)
-CREDENTIAL_FOLDER = os.path.join(BASE_DIR, "credential")
-os.makedirs(CREDENTIAL_FOLDER, exist_ok=True)
 EXAM = os.path.join(BASE_DIR, "exams.json")
 
 
@@ -230,7 +228,7 @@ class UniversityRennes(BaseUniversity):
             revocation_key=revocation_key
         )
         
-        filepath = os.path.join(CREDENTIAL_FOLDER, f"{student.username}_academic_credential.json")
+        filepath = os.path.join(student.get_wallet_path(), "credentials", f"{student.username}_academic_credential.json")
         with open(filepath, "w") as f:
             json.dump(credential, f, indent=2)
 

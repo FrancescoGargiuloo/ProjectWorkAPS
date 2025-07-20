@@ -11,7 +11,6 @@ import hashlib
 from MerkleTree import hash_leaf, verify_merkle_proof, reconstruct_merkle_root
 
 BASE_DIR = os.path.dirname(__file__)
-CREDENTIAL_FOLDER = os.path.join(BASE_DIR, "credential")
 
 
 class UniversitySalerno(BaseUniversity):
@@ -107,9 +106,7 @@ class UniversitySalerno(BaseUniversity):
             list_id=revocation_list_id,
             revocation_key=revocation_key
         )
-
-        filename = f"{student.username}_erasmus_credential.json"
-        filepath = os.path.join(CREDENTIAL_FOLDER, filename)
+        filepath = os.path.join(student.get_wallet_path(), "credentials", f"{student.username}_erasmus_credential.json")
         with open(filepath, "w") as f:
             json.dump(credential_data, f, indent=2)
 
@@ -131,7 +128,7 @@ class UniversitySalerno(BaseUniversity):
             jws = vp_proof["jws"]
             verification_method = vp_proof["verificationMethod"]
 
-            did_doc = self.resolve_did(student_did)
+            did_doc = self.resolve_did_student(student_did)
             pub_key_pem = None
             for vm in did_doc.get("verificationMethod", []):
                 if vm["id"] == verification_method:
