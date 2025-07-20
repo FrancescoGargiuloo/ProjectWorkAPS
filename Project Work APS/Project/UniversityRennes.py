@@ -107,7 +107,7 @@ class UniversityRennes(BaseUniversity):
                 else:
                     print("✅ La credenziale è ancora valida temporalmente.")
             else:
-                print("ℹ️ Nessuna data di scadenza specificata per questa credenziale.")
+                print("Nessuna data di scadenza specificata per questa credenziale.")
             # --- Fine del controllo di validità temporale ---
 
             # 3. Verifica stato di revoca
@@ -253,3 +253,27 @@ class UniversityRennes(BaseUniversity):
             print(
                 f"❌ Si è verificato un errore inaspettato durante la lettura del file {file_path}: {e}. Restituisco lista vuota.")
             return []
+        
+    def revocate_credential(self, erasmus_credential):
+        """
+        Revoca una credenziale accademica Erasmus emessa da Rennes.
+        """
+        # Caso particolare: la credenziale è contenuta dentro una Verifiable Presentation
+        if "verifiableCredential" in erasmus_credential:
+            vc = erasmus_credential["verifiableCredential"]
+        else:
+            vc = erasmus_credential  # fallback: la VC è direttamente passata
+
+        status = vc.get("credentialStatus", {})
+        namespace = status.get("namespace")
+        list_id = status.get("revocationList")
+        rev_key = status.get("revocationKey")
+
+        if namespace and list_id and rev_key:
+            success = self.revocation_registry.revoke(namespace, list_id, rev_key)
+            if success:
+                print(f"✅ Credenziale accademica revocata correttamente da Rennes (list_id: {list_id}).")
+            else:
+                print("❌ Errore nella revoca: chiavi non valide o non presenti.")
+        else:
+            print("⚠️ Dati di revoca mancanti o incompleti nella credenziale.")

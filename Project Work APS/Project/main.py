@@ -148,7 +148,7 @@ def request_erasmus_credential_from_unisa(student_obj: Student, university_saler
     print("✅ Richiesta credenziale Erasmus completata. Controlla la cartella 'credential'.")
 
 
-def rennes_interaction(student_obj: Student, university_rennes: UniversityRennes):
+def rennes_interaction(student_obj: Student, university_rennes: UniversityRennes, university_salerno: UniversitySalerno):
     if not student_obj:
         print("❌ Oggetto studente non disponibile. Impossibile interagire con Rennes.")
         return
@@ -235,7 +235,8 @@ def rennes_interaction(student_obj: Student, university_rennes: UniversityRennes
         return
 
     if not university_rennes.verify_erasmus_credential(erasmus_cred):
-        print("❌ Credenziale Erasmus NON valida. Operazione interrotta.")
+        print("❌ Credenziale Erasmus NON valida. Invio Comunicazione di Revoca a Salerno.")
+        university_salerno.revocate_credential(erasmus_cred)
         return
 
     print("✅ Credenziale Erasmus verificata correttamente da Rennes.")
@@ -252,7 +253,7 @@ def rennes_interaction(student_obj: Student, university_rennes: UniversityRennes
     student_obj.generate_selective_presentation_from_terminal()
 
 
-def verify_presentation_at_origin_university(student_obj: Student, university_salerno: UniversitySalerno):
+def verify_presentation_at_origin_university(student_obj: Student, university_salerno: UniversitySalerno, university_rennes: UniversityRennes):
     """
     Handles the verification of a selective presentation by the University of Salerno.
     """
@@ -285,7 +286,8 @@ def verify_presentation_at_origin_university(student_obj: Student, university_sa
     if result:
         print("✅ Presentazione verificata correttamente dall'Università di Salerno.")
     else:
-        print("❌ Presentazione NON valida per l'Università di Salerno.")
+        print("❌ Presentazione NON valida per l'Università di Salerno. Invio comunicazione di revoca a Rennes.")
+        university_rennes.revocate_credential(presentation)
 
 if __name__ == "__main__":
     # Inizializzazione delle UNICHE istanze delle università
@@ -310,9 +312,9 @@ if __name__ == "__main__":
             elif choice == "2":
                 request_erasmus_credential_from_unisa(authenticated_student, salerno_university)
             elif choice == "3":
-                rennes_interaction(authenticated_student, rennes_university)
+                rennes_interaction(authenticated_student, rennes_university, salerno_university)
             elif choice == "4":
-                verify_presentation_at_origin_university(authenticated_student, salerno_university)
+                verify_presentation_at_origin_university(authenticated_student, salerno_university, rennes_university)
             else:
                 print("Opzione non valida.")
     else:

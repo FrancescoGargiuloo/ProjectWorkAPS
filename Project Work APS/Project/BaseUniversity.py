@@ -145,3 +145,9 @@ class BaseUniversity:
                 format=serialization.PublicFormat.SubjectPublicKeyInfo
             ).decode('utf-8')
         return None
+    
+    def revocate_credential(self, erasmus_credential):
+        """Metodo da implementare nelle sottoclassi per revocare una credenziale Erasmus."""
+        raise NotImplementedError("Questo metodo deve essere implementato dalla sottoclasse.")
+
+    
