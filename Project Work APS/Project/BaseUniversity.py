@@ -15,19 +15,19 @@ class BaseUniversity:
         self.revocation_registry = revocation_registry_cls()
         self._challenges = {}
 
-        # Assicurati che le chiavi siano caricate/generate prima di tentare di usarle
+        # Inizializza le chiavi private e pubbliche
         self._private_key = None
         self._public_key = None
         self._load_or_generate_keypair()
 
         self._update_did_document()
 
-    def _load_or_generate_keypair(self):  # Nuovo metodo
+    def _load_or_generate_keypair(self):
         if os.path.exists(self.priv_path):
             with open(self.priv_path, "rb") as f:
                 self._private_key = serialization.load_pem_private_key(
                     f.read(),
-                    password=None  # In un'applicazione reale, proteggi la chiave con una password
+                    password=None
                 )
             self._public_key = self._private_key.public_key()
             print(f"Chiavi per {self.did} caricate.")
@@ -41,7 +41,7 @@ class BaseUniversity:
                     encryption_algorithm=serialization.NoEncryption()
                 ))
             with open(self.pub_path, "wb") as f:
-                f.write(self._public_key.public_bytes(  # Usa self._public_key qui
+                f.write(self._public_key.public_bytes(
                     encoding=serialization.Encoding.PEM,
                     format=serialization.PublicFormat.SubjectPublicKeyInfo
                 ))
@@ -135,16 +135,6 @@ class BaseUniversity:
         except Exception as e:
             del self._challenges[student_did]
             return {"status": "error", "message": f"Errore durante la verifica: {e}"}
-
-    # METODO AGGIUNTO QUI
-    def get_public_key(self):
-        """Restituisce la chiave pubblica dell'università in formato PEM."""
-        if self._public_key:
-            return self._public_key.public_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PublicFormat.SubjectPublicKeyInfo
-            ).decode('utf-8')
-        return None
     
     def revocate_credential(self, erasmus_credential):
         """Revoca una credenziale."""

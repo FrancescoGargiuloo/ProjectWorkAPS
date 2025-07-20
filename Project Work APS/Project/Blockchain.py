@@ -90,6 +90,7 @@ class Blockchain:
         Cerca nella blockchain il blocco con hash == tx_hash
         e ritorna la Merkle Root salvata in 'data'.
         """
+        self.chain = self._load_chain()
         for block in self.chain:
             if block.hash == tx_hash:
                 # supponendo che la Merkle Root sia salvata come:

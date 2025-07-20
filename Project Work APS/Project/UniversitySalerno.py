@@ -125,11 +125,6 @@ class UniversitySalerno(BaseUniversity):
         :return: True se la presentazione è valida, False altrimenti.
         """
         try:
-            # === MODIFICA QUI: Ricarica la blockchain per avere lo stato più aggiornato ===
-            self.blockchain = Blockchain() # Reinicializza per ricaricare da shared_blockchain.json
-            print("🔄 Blockchain ricaricata prima della verifica della presentazione.")
-            # =========================================================================
-
             # 1. Verifica firma della Verifiable Presentation
             student_did = presentation["holder"]
             vp_proof = presentation["proof"]

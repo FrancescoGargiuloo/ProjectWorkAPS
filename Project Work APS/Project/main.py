@@ -114,8 +114,6 @@ def phase_1_student_creation(university_salerno, university_rennes):
         {"username": "mario.rossi", "password": "Password1!", "first_name": "Mario", "last_name": "Rossi"},
         {"username": "anna.bianchi", "password": "Password2!", "first_name": "Anna", "last_name": "Bianchi"},
         {"username": "luca.verdi", "password": "Password3!", "first_name": "Luca", "last_name": "Verdi"},
-        {"username": "giulia.neri", "password": "Password4!", "first_name": "Giulia", "last_name": "Neri"},
-        {"username": "marco.gialli", "password": "Password5!", "first_name": "Marco", "last_name": "Gialli"},
     ]
 
     registered_student_objects = []
@@ -273,6 +271,8 @@ def phase_5_selective_presentation(authenticated_students, university_salerno, u
 
             with open(os.path.join(CRED_FOLDER, f"{student.username}_vp.json")) as f:
                 presentation = json.load(f)
+            if student == authenticated_students[1]:
+                presentation1 = presentation
 
             print(f"➡️ UniSA verifica la presentazione di {student.username}")
             result = university_salerno.verify_selective_presentation(presentation)
@@ -286,7 +286,7 @@ def phase_5_selective_presentation(authenticated_students, university_salerno, u
             print(f"❌ Errore con presentazione: {e}")
 
     print("\n✅ FASE 5 completata.")
-
+    return presentation1
 
 # --- FASE 6: Revoca credenziali ---
 def phase_6_revoke_multiple_credentials(erasmus_student, academic_student, university_salerno, university_rennes):
@@ -315,7 +315,7 @@ def phase_6_revoke_multiple_credentials(erasmus_student, academic_student, unive
 
 
 # --- FASE 7: Tentativo di riuso dopo revoca ---
-def phase_7_re_presentation_after_revocation(erasmus_student, academic_student, university_salerno, university_rennes):
+def phase_7_re_presentation_after_revocation(erasmus_student, academic_student, presentation, university_salerno, university_rennes):
     """
     Gli studenti provano a riutilizzare credenziali già revocate
     """
@@ -335,17 +335,11 @@ def phase_7_re_presentation_after_revocation(erasmus_student, academic_student, 
             print("⚠️ ERRORE: Erasmus ancora valida dopo revoca!")
 
     # Accademica
-    print(f"\n➡️ {academic_student.username} riprova a usare la credenziale accademica")
-    academic_cred = academic_student.load_academic_credential()
-    if not academic_cred:
-        print("❌ Nessuna credenziale accademica trovata")
+    print(f"\n➡️ {academic_student.username} riprova a usare la presentazione accademica")
+    if not university_salerno.verify_selective_presentation(presentation):
+        print("✅ Revoca accademica funzionante (non è più valida)")
     else:
-        status = academic_cred.get("credentialStatus", {})
-        if university_rennes.revocation_registry.is_revoked(
-            status.get("namespace"), status.get("revocationList"), status.get("revocationKey")):
-            print("✅ Revoca accademica funzionante (non è più valida)")
-        else:
-            print("⚠️ ERRORE: Accademica ancora valida dopo revoca!")
+        print("⚠️ ERRORE: Accademica ancora valida dopo revoca!")
 
     print("\n✅ FASE 7 completata.")
 
@@ -378,6 +372,6 @@ if __name__ == "__main__":
 
     phase_3_issue_erasmus_credential_unisa(authenticated_students, salerno_university)
     phase_4_request_grades_rennes(authenticated_students, rennes_university, salerno_university)
-    phase_5_selective_presentation(authenticated_students, salerno_university, rennes_university)
+    presentation = phase_5_selective_presentation(authenticated_students, salerno_university, rennes_university)
     phase_6_revoke_multiple_credentials(student_for_erasmus_revoke, student_for_academic_revoke, salerno_university, rennes_university)
-    phase_7_re_presentation_after_revocation(student_for_erasmus_revoke, student_for_academic_revoke, salerno_university, rennes_university)
+    phase_7_re_presentation_after_revocation(student_for_erasmus_revoke, student_for_academic_revoke, presentation, salerno_university, rennes_university)
