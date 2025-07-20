@@ -255,21 +255,3 @@ class UniversitySalerno(BaseUniversity):
         except Exception as e:
             print(f"❌ Errore durante la verifica: {e}")
             return False
-        
-    def revocate_credential(self, erasmus_credential):
-        """
-        Revoca una credenziale Erasmus emessa da Salerno.
-        """
-        status = erasmus_credential.get("credentialStatus", {})
-        namespace = status.get("namespace")
-        list_id = status.get("revocationList")
-        rev_key = status.get("revocationKey")
-
-        if namespace and list_id and rev_key:
-            success = self.revocation_registry.revoke(namespace, list_id, rev_key)
-            if success:
-                print(f"✅ Credenziale revocata correttamente da Salerno")
-            else:
-                print("❌ Errore: impossibile revocare la credenziale (chiavi non valide o non esistenti).")
-        else:
-            print("⚠️ Dati di revoca mancanti nella credenziale.")

@@ -1,4 +1,4 @@
-
+# Importo le librerie che mi servono per lavorare
 import os
 import json
 import uuid
@@ -6,50 +6,53 @@ from Student import Student
 from UniversitySalerno import UniversitySalerno
 from UniversityRennes import UniversityRennes
 
+# Qui definisco le cartelle dove verranno salvati i file di database, chiavi, credenziali e DIDs
 BASE_DIR = os.path.dirname(__file__)
 DB_FOLDER = os.path.join(BASE_DIR, "database")
 KEY_FOLDER = os.path.join(BASE_DIR, "keys")
 CRED_FOLDER = os.path.join(BASE_DIR, "credential")
 DID_FOLDER = os.path.join(BASE_DIR, "DID")
 
-# Ensure folders exist
+# Creo le cartelle, se non esistono già (così evito errori dopo)
 os.makedirs(DB_FOLDER, exist_ok=True)
 os.makedirs(KEY_FOLDER, exist_ok=True)
 os.makedirs(CRED_FOLDER, exist_ok=True)
 os.makedirs(DID_FOLDER, exist_ok=True)
 
-# List to keep track of registered students for cleanup
+# Questa lista mi serve per sapere quali studenti ho registrato, utile per fare la pulizia finale
 REGISTERED_STUDENTS_FOR_CLEANUP = []
 
 
-# --- Helper functions for cleanup ---
+# --- Funzione per eliminare un file, se esiste ---
 def _delete_file_if_exists(file_path):
-    """Deletes a file if it exists."""
+    """Cancello il file solo se esiste (evito errori inutili)."""
     if os.path.exists(file_path):
         os.remove(file_path)
-        print(f"🗑️ Deleted: {file_path}")
+        print(f"Eliminato: {file_path}")
 
 
+# --- Pulizia totale dei dati generati ---
 def cleanup_all_data():
     """
-    Function to clean up all generated databases, keys, DIDs, and credentials.
+    Cancello tutti i file creati dal programma: database, chiavi, DIDs, credenziali ecc.
     """
     print("\n" + "=" * 50)
-    print("==== DATA CLEANUP PHASE ====")
+    print("==== FASE DI PULIZIA DATI ====")
     print("=" * 50)
 
-    # Database cleanup
+    # Cancello database degli studenti
     _delete_file_if_exists(os.path.join(DB_FOLDER, "unisa_users.json"))
     _delete_file_if_exists(os.path.join(DB_FOLDER, "rennes_users.json"))
 
+    # Cancello registro revoche e blockchain simulata
     _delete_file_if_exists(os.path.join(BASE_DIR, "revocation_registry.json"))
     _delete_file_if_exists(os.path.join(BASE_DIR, "shared_blockchain.json"))
 
-    # Cleanup of DB encryption keys (if present)
+    # Cancello le chiavi di cifratura dei database (se ci sono)
     _delete_file_if_exists(os.path.join(KEY_FOLDER, "unisa_users_encryption.key"))
     _delete_file_if_exists(os.path.join(KEY_FOLDER, "rennes_users_encryption.key"))
 
-    # Cleanup of university DIDs and keys
+    # Cancello chiavi e DIDs delle università
     _delete_file_if_exists(os.path.join(KEY_FOLDER, "unisa_priv.pem"))
     _delete_file_if_exists(os.path.join(KEY_FOLDER, "unisa_pub.pem"))
     _delete_file_if_exists(os.path.join(DID_FOLDER, "unisa_it_did.json"))
@@ -58,52 +61,53 @@ def cleanup_all_data():
     _delete_file_if_exists(os.path.join(KEY_FOLDER, "rennes_pub.pem"))
     _delete_file_if_exists(os.path.join(DID_FOLDER, "rennes_it_did.json"))
 
-    # Cleanup of student keys, DIDs, and credentials
+    # Cancello tutto quello che riguarda gli studenti registrati
     for student_data in REGISTERED_STUDENTS_FOR_CLEANUP:
         username = student_data["username"]
         user_id = student_data["user_id"]
 
-        # Cleanup student keys (format: username_priv.pem)
+        # Cancello chiavi dello studente
         _delete_file_if_exists(os.path.join(KEY_FOLDER, f"{username}_priv.pem"))
         _delete_file_if_exists(os.path.join(KEY_FOLDER, f"{username}_pub.pem"))
 
-        # Cleanup student DID (format: username_user_id_localhost_did.json)
+        # Cancello il file DID dello studente
         did_filename = f"{username.replace('.', '_')}_{user_id}_localhost_did.json"
         _delete_file_if_exists(os.path.join(DID_FOLDER, did_filename))
 
-        # Cleanup student credentials
+        # Cancello credenziali Erasmus e accademiche
         _delete_file_if_exists(os.path.join(CRED_FOLDER, f"{username}_erasmus_credential.json"))
         _delete_file_if_exists(os.path.join(CRED_FOLDER, f"{username}_academic_credential.json"))
         _delete_file_if_exists(os.path.join(CRED_FOLDER, f"{username}_vp.json"))
-        # Revoked credentials (may or may not be generated)
+
+        # Cancello anche eventuali credenziali revocate
         _delete_file_if_exists(os.path.join(CRED_FOLDER, f"{username}_revoked_erasmus_credential.json"))
         _delete_file_if_exists(os.path.join(CRED_FOLDER, f"{username}_revoked_academic_credential.json"))
 
-    print("\n✅ Cleanup completed.")
+    print("\n✅ Pulizia completata.")
     print("=" * 50)
 
 
-# --- PHASE 0: Initialization ---
+# --- FASE 0: Inizializzazione delle università ---
 def phase_0_initialization():
     """
-    Initializes university instances.
+    Creo gli oggetti delle università di Salerno e Rennes
     """
     print("\n" + "=" * 50)
-    print("==== PHASE 0: INITIALIZATION ====")
+    print("==== FASE 0: INIZIALIZZAZIONE ====")
     print("=" * 50)
     salerno_university = UniversitySalerno()
     rennes_university = UniversityRennes()
-    print("✅ University of Salerno and University of Rennes initialized.")
+    print("✅ Università inizializzate correttamente.")
     return salerno_university, rennes_university
 
 
-# --- PHASE 1: Student Creation ---
-def phase_1_student_creation(university_salerno: UniversitySalerno, university_rennes: UniversityRennes):
+# --- FASE 1: Creazione e registrazione degli studenti ---
+def phase_1_student_creation(university_salerno, university_rennes):
     """
-    Creates and registers 5 fictitious students in both databases.
+    Registro 5 studenti finti sia a Salerno che a Rennes
     """
     print("\n" + "=" * 50)
-    print("==== PHASE 1: STUDENT CREATION AND REGISTRATION ====")
+    print("==== FASE 1: CREAZIONE E REGISTRAZIONE STUDENTI ====")
     print("=" * 50)
 
     students_data = [
@@ -121,38 +125,28 @@ def phase_1_student_creation(university_salerno: UniversitySalerno, university_r
         password = data["password"]
         first_name = data["first_name"]
         last_name = data["last_name"]
-        user_id = str(uuid.uuid4())  # Unique ID for each student
+        user_id = str(uuid.uuid4())
 
-        print(f"\nAttempting to register student {i + 1}: {username}")
+        print(f"\n➡️ Registro lo studente {i + 1}: {username}")
+        student_obj = Student(username, password, user_id, first_name, last_name)
 
-        # Create the Student object which generates keys and DID
-        student_obj = Student(username=username, password=password, user_id=user_id,
-                              first_name=first_name, last_name=last_name)
-
-        # Registration at University of Salerno
-        success_salerno = university_salerno.register_student(
-            user_id, username, password, first_name, last_name, student_obj.get_public_key()
-        )
-        if success_salerno:
+        # Registrazione a Salerno
+        if university_salerno.register_student(user_id, username, password, first_name, last_name, student_obj.get_public_key()):
             university_salerno.assign_did_to_student(user_id, student_obj.did, student_obj.get_public_key())
-            print(f"✅ Student '{username}' successfully registered with UniSA.")
+            print(f"✅ {username} registrato a UniSA")
         else:
-            print(f"❌ Error registering '{username}' with UniSA.")
+            print(f"❌ Errore a UniSA per {username}")
             continue
 
-        # Registration at University of Rennes (simulating the same students)
-        success_rennes = university_rennes.register_student(
-            user_id, username, password, first_name, last_name, student_obj.get_public_key()
-        )
-        if success_rennes:
+        # Registrazione anche a Rennes
+        if university_rennes.register_student(user_id, username, password, first_name, last_name, student_obj.get_public_key()):
             university_rennes.assign_did_to_student(user_id, student_obj.did, student_obj.get_public_key())
-            print(f"✅ Student '{username}' successfully registered with Rennes.")
+            print(f"✅ {username} registrato a Rennes")
         else:
-            print(f"❌ Error registering '{username}' with Rennes.")
+            print(f"❌ Errore a Rennes per {username}")
             continue
 
         registered_student_objects.append(student_obj)
-        # Update to include necessary data to construct the DID filename correctly for cleanup
         REGISTERED_STUDENTS_FOR_CLEANUP.append({
             "username": username,
             "user_id": user_id,
@@ -160,329 +154,230 @@ def phase_1_student_creation(university_salerno: UniversitySalerno, university_r
             "last_name": last_name
         })
 
-    print("\n✅ PHASE 1 completed: All students have been created and registered in the databases.")
+    print("\n✅ Tutti gli studenti registrati.")
     return registered_student_objects
 
 
-# --- PHASE 2: Enrollment and Data (Challenge-Response) ---
-def phase_2_enrollment_and_data(students: list[Student], university_salerno: UniversitySalerno):
+# --- FASE 2: Autenticazione con challenge-response ---
+def phase_2_enrollment_and_data(students, university_salerno):
     """
-    Simulates challenge-response authentication for each student with UniSA.
+    Gli studenti fanno login usando il meccanismo di challenge-response con UniSA
     """
     print("\n" + "=" * 50)
-    print("==== PHASE 2: ENROLLMENT AND DATA (CHALLENGE-RESPONSE WITH UNISA) ====")
+    print("==== FASE 2: AUTENTICAZIONE CON UNISA ====")
     print("=" * 50)
 
     authenticated_students = []
-    for student_obj in students:
-        print(f"\nAttempting authentication for {student_obj.username} with UniSA...")
 
-        # 1. Retrieve user data from UniSA DB to simulate initial authentication
-        user_data = university_salerno.authenticate_student(student_obj.username, student_obj.password)
+    for student in students:
+        print(f"\n➡️ Autenticazione di {student.username}...")
 
+        user_data = university_salerno.authenticate_student(student.username, student.password)
         if not user_data:
-            print(
-                f"❌ Authentication failed for {student_obj.username} (incorrect password or user not found after registration)."
-            )
+            print(f"❌ Password sbagliata o utente non esistente")
             continue
 
-        # Verify student DID
-        student_did_from_client = student_obj.did
-        did_from_university_db = user_data.get("did")
-
-        if student_did_from_client == did_from_university_db:
-            print(f"✅ UniSA: DID for {student_obj.username} matches. Proceeding.")
-        else:
-            print(
-                f"❌ UniSA: ATTENTION! DID for {student_obj.username} does not match ({student_did_from_client} vs {did_from_university_db}). Skipping."
-            )
+        if student.did != user_data.get("did"):
+            print(f"❌ DID non corrisponde per {student.username}")
             continue
 
-        # Challenge-Response
-        challenge = university_salerno.generate_challenge(student_obj.user_id)
+        challenge = university_salerno.generate_challenge(student.user_id)
         if not challenge:
-            print(f"❌ Error: Unable to generate challenge for {student_obj.username}.")
+            print(f"❌ Errore nel generare challenge")
             continue
 
-        signature = student_obj.sign(challenge)
-        verification = university_salerno.verify_challenge_response(
-            user_id=student_obj.user_id,
-            signature_b64=signature
-        )
+        signature = student.sign(challenge)
+        result = university_salerno.verify_challenge_response(student.user_id, signature)
 
-        if verification["status"] == "ok":
-            print(f"✅ Challenge-Response for {student_obj.username} successful with UniSA.")
-            authenticated_students.append(student_obj)
+        if result["status"] == "ok":
+            print(f"✅ Autenticazione riuscita per {student.username}")
+            authenticated_students.append(student)
         else:
-            print(f"❌ Challenge-Response verification for {student_obj.username} failed: {verification['message']}")
-    print("\n✅ PHASE 2 completed.")
+            print(f"❌ Verifica fallita: {result['message']}")
+
+    print("\n✅ FASE 2 completata.")
     return authenticated_students
 
 
-# --- PHASE 3: Issuance of Erasmus Eligibility Credential at UniSA ---
-def phase_3_issue_erasmus_credential_unisa(authenticated_students: list[Student],
-                                           university_salerno: UniversitySalerno):
+# --- FASE 3: Richiesta credenziale Erasmus ---
+def phase_3_issue_erasmus_credential_unisa(authenticated_students, university_salerno):
     """
-    Each authenticated student requests the Erasmus credential from UniSA.
-    """
-    print("\n" + "=" * 50)
-    print("==== PHASE 3: ISSUANCE OF ERASMUS ELIGIBILITY CREDENTIAL AT UNISA ====")
-    print("=" * 50)
-
-    for student_obj in authenticated_students:
-        print(
-            f"\nStudent {student_obj.username}: Requesting Erasmus eligibility credential from the University of Salerno."
-        )
-        university_salerno.generate_erasmus_credential(student_obj)
-        print(
-            f"✅ Erasmus credential request for {student_obj.username} completed. Check the 'credential' folder."
-        )
-    print("\n✅ PHASE 3 completed: Erasmus credentials issued for all authenticated students.")
-
-
-# --- PHASE 4: Request for Grade Attestation from Rennes ---
-def phase_4_request_grades_rennes(authenticated_students: list[Student], university_rennes: UniversityRennes,
-                                  university_salerno: UniversitySalerno):
-    """
-    Interaction of each authenticated student with Rennes to obtain grade attestation.
-    Includes verification of the Erasmus credential by Rennes.
+    Gli studenti autenticati chiedono la credenziale Erasmus a UniSA
     """
     print("\n" + "=" * 50)
-    print("==== PHASE 4: REQUEST FOR GRADE ATTESTATION FROM RENNES ====")
+    print("==== FASE 3: CREDENZIALE ERASMUS ====")
     print("=" * 50)
 
-    # Load exams from exams.json file
+    for student in authenticated_students:
+        print(f"\n➡️ {student.username} richiede credenziale Erasmus")
+        university_salerno.generate_erasmus_credential(student)
+        print(f"✅ Credenziale Erasmus generata")
+
+    print("\n✅ FASE 3 completata.")
+
+
+# --- FASE 4: Richiesta attestato voti da Rennes ---
+def phase_4_request_grades_rennes(authenticated_students, university_rennes, university_salerno):
+    """
+    Ogni studente invia la credenziale Erasmus a Rennes e riceve attestato voti
+    """
+    print("\n" + "=" * 50)
+    print("==== FASE 4: RICHIESTA VOTI A RENNES ====")
+    print("=" * 50)
+
     all_exams_data = university_rennes.collect_exam_data()
     if not all_exams_data:
-        print("❌ Could not load exam data from exams.json. Skipping Phase 4.")
+        print("❌ Nessun voto trovato.")
         return
 
-    for student_obj in authenticated_students:
-        print(f"\nStudent {student_obj.username}: Interacting with University of Rennes.")
+    for student in authenticated_students:
+        print(f"\n➡️ {student.username} si autentica con Rennes")
 
-        # Student already has trusted DIDs (Rennes, UniSA) initialized.
-        # No need to add them here.
-
-        # Challenge-response with Rennes (even if the student is already registered)
-        print(f"Rennes: Generating challenge for {student_obj.username}...")
-        challenge = university_rennes.generate_challenge(student_obj.user_id)
-        if not challenge:
-            print(f"❌ Error generating challenge for Rennes user: {student_obj.username}.")
+        challenge = university_rennes.generate_challenge(student.user_id)
+        signature = student.sign(challenge)
+        result = university_rennes.verify_challenge_response(student.user_id, signature)
+        if result["status"] != "ok":
+            print("❌ Verifica fallita.")
             continue
 
-        signature = student_obj.sign(challenge)
-        verification = university_rennes.verify_challenge_response(student_obj.user_id, signature)
-        if verification["status"] != "ok":
-            print(
-                f"❌ Challenge-response verification failed with Rennes for {student_obj.username}: {verification['message']}"
-            )
-            continue
-
-        print(f"✅ Challenge-response successful with Rennes for {student_obj.username}.")
-
-        print(f"Student {student_obj.username}: Sending Erasmus credential to University of Rennes...")
-        erasmus_cred = student_obj.load_erasmus_credential()
+        erasmus_cred = student.load_erasmus_credential()
         if not erasmus_cred:
-            print(f"❌ Erasmus credential not found for {student_obj.username}. Request it from UniSA first.")
+            print("❌ Nessuna credenziale Erasmus trovata")
             continue
 
         if not university_rennes.verify_erasmus_credential(erasmus_cred):
-            print(
-                f"❌ Erasmus credential for {student_obj.username} is NOT valid. Sending Revocation Communication to Salerno."
-            )
+            print("❌ Erasmus non valida. Revoca inviata a UniSA.")
             university_salerno.revocate_credential(erasmus_cred)
             continue
 
-        print(f"✅ Erasmus credential for {student_obj.username} successfully verified by Rennes.")
+        university_rennes.generate_academic_credential(student, all_exams_data)
+        print("✅ Credenziale accademica generata")
 
-        # Pass the exam data loaded from the file
-        university_rennes.generate_academic_credential(student_obj, all_exams_data)
-        print(f"✅ Academic Credential issued by Rennes for {student_obj.username}.")
-    print("\n✅ PHASE 4 completed.")
+    print("\n✅ FASE 4 completata.")
 
 
-# --- PHASE 5: Selective Presentation ---
-def phase_5_selective_presentation(authenticated_students: list[Student], university_salerno: UniversitySalerno,
-                                   university_rennes: UniversityRennes):
+# --- FASE 5: Presentazione selettiva ---
+def phase_5_selective_presentation(authenticated_students, university_salerno, university_rennes):
     """
-    Each student generates and presents their Verifiable Presentation to the University of Salerno.
+    Ogni studente genera una presentazione selettiva e la manda a UniSA
     """
     print("\n" + "=" * 50)
-    print("==== PHASE 5: SELECTIVE PRESENTATION ====")
+    print("==== FASE 5: PRESENTAZIONE SELETTIVA ====")
     print("=" * 50)
 
-    for student_obj in authenticated_students:
-        print(f"\nStudent {student_obj.username}: Generating selective presentation...")
+    for student in authenticated_students:
+        print(f"\n➡️ Generazione presentazione per {student.username}")
         try:
-            student_obj.generate_selective_presentation_automated(
-                target_university_did=university_salerno.did  # Use the university's direct DID attribute
-            )
+            student.generate_selective_presentation_automated(university_salerno.did)
+            print("✅ Presentazione generata")
 
-            print(f"✅ Selective presentation generated for {student_obj.username}.")
-
-            # University of Salerno verifies the presentation
-            path = os.path.join(CRED_FOLDER, f"{student_obj.username}_vp.json")
-            with open(path, "r") as f:
+            with open(os.path.join(CRED_FOLDER, f"{student.username}_vp.json")) as f:
                 presentation = json.load(f)
-            print(
-                f"University of Salerno: Received presentation from {student_obj.username}. Initiating verification...")
 
+            print(f"➡️ UniSA verifica la presentazione di {student.username}")
             result = university_salerno.verify_selective_presentation(presentation)
+
             if result:
-                print(f"✅ Presentation for {student_obj.username} successfully verified by the University of Salerno.")
+                print("✅ Presentazione valida")
             else:
-                print(
-                    f"❌ Presentation for {student_obj.username} NOT valid for the University of Salerno. Sending revocation communication to Rennes."
-                )
+                print("❌ Presentazione non valida. Invio revoca a Rennes.")
                 university_rennes.revocate_credential(presentation)
         except Exception as e:
-            print(
-                f"❌ Error during selective presentation generation or verification for {student_obj.username}: {e}"
-            )
-    print("\n✅ PHASE 5 completed.")
+            print(f"❌ Errore con presentazione: {e}")
 
-### PHASE 6: Revocation of Credentials for Different Students
+    print("\n✅ FASE 5 completata.")
 
-def phase_6_revoke_multiple_credentials(erasmus_student: Student, academic_student: Student,
-                                        university_salerno: UniversitySalerno, university_rennes: UniversityRennes):
+
+# --- FASE 6: Revoca credenziali ---
+def phase_6_revoke_multiple_credentials(erasmus_student, academic_student, university_salerno, university_rennes):
     """
-    Performs revocation of different credentials for different students.
+    Revoco credenziale Erasmus di uno studente e accademica di un altro
     """
     print("\n" + "=" * 50)
-    print(f"==== PHASE 6: REVOCATION OF MULTIPLE CREDENTIALS (DIFFERENT STUDENTS) ====")
+    print("==== FASE 6: REVOCA CREDENZIALI ====")
     print("=" * 50)
 
-    # --- Revoke Erasmus Eligibility Credential for the first student ---
-    print(
-        f"\nRequesting revocation of the **Eligibility Erasmus** credential for {erasmus_student.username} from UniSA...")
     erasmus_cred = erasmus_student.load_erasmus_credential()
     if erasmus_cred:
-        # The Erasmus credential is issued by UniSA, so revocation happens via UniSA
         university_salerno.revocate_credential(erasmus_cred)
-        print(f"✅ Eligibility Erasmus credential of {erasmus_student.username} revoked by UniSA.")
+        print("✅ Erasmus revocata")
     else:
-        print(f"⚠️ Eligibility Erasmus credential for {erasmus_student.username} not found, unable to revoke.")
+        print("⚠️ Nessuna Erasmus da revocare")
 
-    # --- Revoke Academic Credential for the second student ---
-    print(f"\nRequesting revocation of the **Academic Credential** for {academic_student.username} from Rennes...")
     academic_cred = academic_student.load_academic_credential()
     if academic_cred:
-        # The Academic credential is issued by Rennes, so revocation happens via Rennes
         university_rennes.revocate_credential(academic_cred)
-        print(f"✅ Academic Credential of {academic_student.username} revoked by Rennes.")
+        print("✅ Credenziale accademica revocata")
     else:
-        print(f"⚠️ Academic Credential for {academic_student.username} not found, unable to revoke.")
+        print("⚠️ Nessuna credenziale accademica trovata")
 
-    print("\n✅ PHASE 6 completed.")
+    print("\n✅ FASE 6 completata.")
 
 
-### PHASE 7: Attempted Re-presentation after Revocations
-
-def phase_7_re_presentation_after_revocation(erasmus_student: Student, academic_student: Student,
-                                             university_salerno: UniversitySalerno,
-                                             university_rennes: UniversityRennes):
+# --- FASE 7: Tentativo di riuso dopo revoca ---
+def phase_7_re_presentation_after_revocation(erasmus_student, academic_student, university_salerno, university_rennes):
     """
-    Students attempt to re-present credentials after revocations.
+    Gli studenti provano a riutilizzare credenziali già revocate
     """
     print("\n" + "=" * 50)
-    print("==== PHASE 7: ATTEMPTED RE-PRESENTATION AFTER REVOCATION ====")
+    print("==== FASE 7: RIUTILIZZO DOPO REVOCA ====")
     print("=" * 50)
 
-    # Attempt to re-present the Erasmus credential (for the first student)
-    print(f"\nStudent {erasmus_student.username}: Attempting to re-present the **Eligibility Erasmus Credential**.")
+    # Erasmus
+    print(f"\n➡️ {erasmus_student.username} riprova a usare la credenziale Erasmus")
     erasmus_cred = erasmus_student.load_erasmus_credential()
     if not erasmus_cred:
-        print(f"❌ Erasmus credential not found for {erasmus_student.username}. Unable to re-present.")
+        print("❌ Nessuna credenziale Erasmus trovata")
     else:
-        # Attempt to re-present the Erasmus credential to Rennes (which will verify it with UniSA)
-        print(
-            f"Student {erasmus_student.username}: Re-sending the Erasmus credential to the University of Rennes for verification."
-        )
         if not university_rennes.verify_erasmus_credential(erasmus_cred):
-            print(
-                f"❌ The Erasmus credential of {erasmus_student.username} was detected as NOT valid by Rennes (as expected after revocation)."
-            )
-            # Simulate another revocation communication to UniSA even if already revoked
-            university_salerno.revocate_credential(erasmus_cred)
+            print("✅ Revoca Erasmus funzionante (non è più valida)")
         else:
-            print(
-                f"⚠️ ERROR: The Erasmus credential of {erasmus_student.username} was unexpectedly verified as valid after revocation."
-            )
+            print("⚠️ ERRORE: Erasmus ancora valida dopo revoca!")
 
-    # Attempt to re-present the Academic credential (for the second student)
-    print(f"\nStudent {academic_student.username}: Attempting to re-present the **Academic Credential**.")
+    # Accademica
+    print(f"\n➡️ {academic_student.username} riprova a usare la credenziale accademica")
     academic_cred = academic_student.load_academic_credential()
     if not academic_cred:
-        print(f"❌ Academic Credential not found for {academic_student.username}. Unable to re-present.")
+        print("❌ Nessuna credenziale accademica trovata")
     else:
-        print(
-            f"Student {academic_student.username}: Attempting to re-present the Academic Credential (verification simulation).")
-
-        # Extract revocation status details from the academic credential
-        status_info = academic_cred.get("credentialStatus", {})
-        namespace = status_info.get("namespace")
-        list_id = status_info.get("revocationList")
-        revocation_key = status_info.get("revocationKey")
-
-        if namespace and list_id and revocation_key:
-            # Use the is_revoked() method of Rennes's revocation registry
-            if university_rennes.revocation_registry.is_revoked(namespace, list_id, revocation_key):
-                print(
-                    f"❌ The Academic Credential of {academic_student.username} was detected as NOT valid by Rennes (as expected after revocation).")
-            else:
-                print(
-                    f"⚠️ ERROR: The Academic Credential of {academic_student.username} was unexpectedly verified as valid after revocation.")
+        status = academic_cred.get("credentialStatus", {})
+        if university_rennes.revocation_registry.is_revoked(
+            status.get("namespace"), status.get("revocationList"), status.get("revocationKey")):
+            print("✅ Revoca accademica funzionante (non è più valida)")
         else:
-            print(
-                f"❌ Unable to verify revocation status: Insufficient information in the academic credential for {academic_student.username}.")
+            print("⚠️ ERRORE: Accademica ancora valida dopo revoca!")
 
-    print("\n✅ PHASE 7 completed.")
+    print("\n✅ FASE 7 completata.")
 
-# --- Automated Flow Execution ---
+
+# --- ESECUZIONE AUTOMATICA DEL FLUSSO COMPLETO ---
 if __name__ == "__main__":
-    # Initial cleanup to ensure a clean state before execution
     cleanup_all_data()
 
     salerno_university, rennes_university = phase_0_initialization()
 
-    # PHASE 1
     students = phase_1_student_creation(salerno_university, rennes_university)
     if not students:
-        print("❌ No students registered. Terminating script.")
+        print("❌ Nessuno studente registrato.")
         cleanup_all_data()
         exit()
 
-    # PHASE 2
     authenticated_students = phase_2_enrollment_and_data(students, salerno_university)
     if not authenticated_students:
-        print("❌ No students authenticated. Terminating script.")
+        print("❌ Nessuno studente autenticato.")
         cleanup_all_data()
         exit()
 
-    # Ensure at least two authenticated students for separate revocation phases
     if len(authenticated_students) < 2:
-        print(
-            "⚠️ At least two authenticated students are required to proceed with separate revocation phases. Terminating script.")
+        print("⚠️ Servono almeno 2 studenti autenticati.")
         cleanup_all_data()
         exit()
 
-    student_for_erasmus_revoke = authenticated_students[0]  # Mario Rossi
-    student_for_academic_revoke = authenticated_students[1]  # Anna Bianchi
+    student_for_erasmus_revoke = authenticated_students[0]
+    student_for_academic_revoke = authenticated_students[1]
 
-    # PHASE 3
     phase_3_issue_erasmus_credential_unisa(authenticated_students, salerno_university)
-
-    # PHASE 4
     phase_4_request_grades_rennes(authenticated_students, rennes_university, salerno_university)
-
-    # PHASE 5
     phase_5_selective_presentation(authenticated_students, salerno_university, rennes_university)
-
-    # PHASE 6 - Multiple revocations for different students
-    phase_6_revoke_multiple_credentials(student_for_erasmus_revoke, student_for_academic_revoke, salerno_university,
-                                        rennes_university)
-    # PHASE 7 - Re-presentation after Revocation
-    phase_7_re_presentation_after_revocation(student_for_erasmus_revoke, student_for_academic_revoke,
-                                             salerno_university, rennes_university)
-
-    cleanup_all_data()
+    phase_6_revoke_multiple_credentials(student_for_erasmus_revoke, student_for_academic_revoke, salerno_university, rennes_university)
+    phase_7_re_presentation_after_revocation(student_for_erasmus_revoke, student_for_academic_revoke, salerno_university, rennes_university)
