@@ -12,7 +12,7 @@ class RevocationRegistry:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-            cls._instance._registry = {}  # type: Dict[str, Dict[str, Dict[str, bool]]]
+            cls._instance._registry = {}  # type: ignore # type: Dict[str, Dict[str, Dict[str, bool]]]
             cls._instance.load_from_file(REGISTRY_FILE)
         return cls._instance
 
