@@ -241,7 +241,7 @@ def rennes_interaction(student_obj: Student, university_rennes: UniversityRennes
 
     print("✅ Credenziale Erasmus verificata correttamente da Rennes.")
 
-    exams = university_rennes.collect_exam_data("exams.json")
+    exams = university_rennes.collect_exam_data()
     if not exams:
         print("Nessun esame disponibile per la credenziale accademica.")
         return
