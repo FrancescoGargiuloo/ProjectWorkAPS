@@ -18,8 +18,8 @@ class UniversitySalerno(BaseUniversity):
     def __init__(self):
         super().__init__(
             did="did:web:unisa.it",
-            priv_key_filename="university_priv.pem",
-            pub_key_filename="university_pub.pem",
+            priv_key_filename="unisa_priv.pem",
+            pub_key_filename="unisa_pub.pem",
             db_name="unisa_users",
             keys_folder=os.path.join(BASE_DIR, "keys"),
             did_folder=os.path.join(BASE_DIR, "DID"),

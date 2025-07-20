@@ -32,6 +32,7 @@ class Student:
         self.did = f"did:web:{username}.{user_id}.localhost"
         self.priv_path = os.path.join(KEYS_FOLDER, f"{username}_priv.pem")
         self.pub_path = os.path.join(KEYS_FOLDER, f"{username}_pub.pem")
+        self._trusted_dids = self.get_trusted_did()
 
         # Assicurati che le cartelle esistano
         os.makedirs(KEYS_FOLDER, exist_ok=True)
@@ -119,13 +120,11 @@ class Student:
         )
         return base64.b64encode(signature).decode()
 
-    def get_trusted_dids(self):
+    def get_trusted_did(self) -> list:
         """
-        Simula la lista di DID trusted nel wallet dello studente.
-        Questi sono i DID di emittenti di cui lo studente si fida.
-        :return: Lista di stringhe DID trusted.
+        Returns a hardcoded list of trusted DIDs.
+        This removes the need for explicit add_trusted_did calls in main.py.
         """
-        # Lo studente si fida di Salerno e Rennes per questo scenario
         return ["did:web:unisa.it", "did:web:rennes.it"]
 
     def load_erasmus_credential(self):
@@ -160,24 +159,36 @@ class Student:
             print(f"❌ Errore di parsing della credenziale Accademica per {self.username}.")
             return None
 
-    def generate_selective_presentation_from_terminal(self):
+    def generate_selective_presentation_automated(self, target_university_did: str, reveal_fields: dict = None):
         """
-        Genera una presentazione selettiva interattivamente dal terminale.
-        Chiede allo studente quali campi rivelare dalla sua credenziale accademica.
+        Genera una presentazione selettiva in modo automatizzato.
+        Permette di specificare quali campi rivelare da ciascun esame.
+        Se reveal_fields non è specificato, rivela un set predefinito (es. tutti i voti e crediti).
+
+        :param target_university_did: Il DID dell'università a cui si sta presentando (es. did:web:unisa.it).
+        :param reveal_fields: Un dizionario che specifica quali campi rivelare per ogni esame.
+                              Formato: { "examId": {"field1": True, "field2": False}, ... }
+                              Se un campo non è presente o è False, il suo valore non verrà rivelato,
+                              ma la Merkle proof del suo hash verrà inclusa.
+        :return: La Verifiable Presentation generata come dizionario, o None se fallisce.
         """
         academic_cred = self.load_academic_credential()
         if not academic_cred:
             print("Impossibile generare la presentazione selettiva: Credenziale Accademica non trovata.")
             return None
 
-        # La struttura della VC accademica ha gli esami completi in credentialSubject["exams"]
         original_exams = academic_cred["credentialSubject"]["exams"]
 
         # 1. Calcolo tutte le foglie Merkle per tutti i campi di tutti gli esami
         leaves = []
         leaf_lookup = {}  # Mappa hash della foglia all'oggetto foglia {hash: {examId, field, value}}
         for exam in original_exams:
-            exam_id = exam.get("examId", str(uuid.uuid4())) # Assicurati che ogni esame abbia un ID
+            # Assicurati che ogni esame abbia un ID. Se manca, genera uno temporaneo.
+            exam_id = exam.get("examId", str(uuid.uuid4()))
+            # Aggiungi l'examId all'esame se non esiste per coerenza
+            if "examId" not in exam:
+                exam["examId"] = exam_id
+
             for field in ["name", "grade", "credits", "date"]:
                 if field in exam:
                     leaf_obj = {"examId": exam_id, "field": field, "value": exam[field]}
@@ -200,38 +211,38 @@ class Student:
                 "value": leaf["value"]  # Questo valore verrà rimosso se il campo è nascosto
             }
 
-        # 3. Chiedo interattivamente allo studente cosa mostrare
-        selected_claims = {} # Contiene solo i dati che lo studente decide di rivelare
-
-        print("\n==== [ Selezione Esami e Attributi da Mostrare nella Presentazione Selettiva ] ====")
-        for exam in original_exams:
-            exam_id = exam.get("examId", "N/A")
-            name = exam.get("name", "Esame Sconosciuto")
-            print(f"\n📝 Esame: {name} (ID: {exam_id})")
-
-            include = input(f"→ Vuoi includere l'esame '{name}' nella presentazione? (s/N): ").strip().lower()
-            if include != 's':
-                continue
-
-            selected_claims[exam_id] = {"name": name} # Il nome dell'esame è sempre incluso se l'esame è incluso
-
-            for field in ["grade", "credits", "date"]:
-                if field in exam:
-                    if field == "grade":
-                        # Il voto è obbligatorio se l'esame è incluso
-                        selected_claims[exam_id][field] = exam[field]
-                        print(f"   - '{field}' (Voto: {exam[field]}) è obbligatorio e sarà incluso.")
-                    else:
-                        show = input(f"   - Mostrare '{field}' (attuale: {exam[field]})? (s/N): ").strip().lower()
-                        if show == "s":
+        # 3. Determina quali campi rivelare in base a 'reveal_fields' o a un set predefinito
+        selected_claims = {}
+        if reveal_fields is None:
+            # Set di rivelazione predefinito: rivela nome, voto e crediti di tutti gli esami.
+            for exam in original_exams:
+                exam_id = exam["examId"] # Ora sappiamo che ha un ID
+                selected_claims[exam_id] = {"name": exam.get("name")} # Nome sempre incluso se esame incluso
+                if "grade" in exam:
+                    selected_claims[exam_id]["grade"] = exam["grade"]
+                if "credits" in exam:
+                    selected_claims[exam_id]["credits"] = exam["credits"]
+                # Non rivelare 'date' per impostazione predefinita
+        else:
+            # Usa la configurazione di rivelazione fornita
+            for exam in original_exams:
+                exam_id = exam["examId"]
+                if exam_id in reveal_fields:
+                    selected_claims[exam_id] = {}
+                    for field, should_reveal in reveal_fields[exam_id].items():
+                        if should_reveal and field in exam:
                             selected_claims[exam_id][field] = exam[field]
-                        else:
-                            # Se il campo non viene rivelato, rimuovi il "value" dalla proof e aggiungi "leafHash"
+                        elif not should_reveal and field in exam:
+                            # Se non deve essere rivelato, rimuovi il valore e metti l'hash della foglia
+                            leaf_obj = {"examId": exam_id, "field": field, "value": exam[field]}
+                            leaf_hash = hash_leaf(leaf_obj)
                             if exam_id in full_proofs and field in full_proofs[exam_id]:
-                                leaf_obj = {"examId": exam_id, "field": field, "value": exam[field]}
-                                leaf_hash = hash_leaf(leaf_obj)
                                 full_proofs[exam_id][field].pop("value", None) # Rimuovi il valore rivelato
                                 full_proofs[exam_id][field]["leafHash"] = leaf_hash # Includi solo l'hash della foglia
+                    # Assicurati che il nome dell'esame sia sempre presente se l'esame è incluso nella rivelazione
+                    if "name" in exam and "name" not in selected_claims[exam_id]:
+                        selected_claims[exam_id]["name"] = exam["name"]
+
 
         if not selected_claims:
             print("⚠️ Nessun esame selezionato per la presentazione. Presentazione non generata.")
@@ -264,17 +275,9 @@ class Student:
 
         # Rimuovi la 'proof' della VC interna prima di firmare la VP, se presente, per evitare firme annidate non desiderate
         # La VP firma la VC completa (con la sua proof) ma la sua stessa proof è esterna.
-        if "verifiableCredential" in vp_to_sign and "proof" in vp_to_sign["verifiableCredential"]:
-            # Crea una copia profonda per evitare modifiche all'originale academic_cred
-            vc_copy_for_vp = json.loads(json.dumps(vp_to_sign["verifiableCredential"]))
-            # Rimuovi la proof della VC interna solo per il payload che verrà firmato dalla VP
-            # Questo è cruciale per evitare che la VP firmi la propria proof, il che creerebbe un loop.
-            # La proof della VC originale è comunque inclusa nel campo 'verifiableCredential' della VP,
-            # ma non è parte del payload che la VP stessa firma.
-            # Questo punto è delicato e dipende dalle specifiche esatte del "proof" della VC e della VP.
-            # Per questa implementazione, assumiamo che la VP firmi l'intera VC come payload,
-            # ma la sua propria proof viene aggiunta dopo.
-            pass # Non rimuoviamo la proof della VC qui, la VP firma la VC completa.
+        # Per questa implementazione, la VP firma l'intera VC come payload, inclusa la sua proof interna.
+        # La proof della VP è aggiunta separatamente.
+        # Questo è il comportamento standard per le VPs che contengono VC "embedded".
 
         nonce = base64.b64encode(os.urandom(16)).decode()
         created = datetime.now(timezone.utc).isoformat() + "Z"
@@ -300,4 +303,3 @@ class Student:
 
         print(f"\n✅ Verifiable Presentation salvata in: {output_path}")
         return vp
-

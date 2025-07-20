@@ -56,6 +56,4 @@ class RevocationRegistry:
         else:
             self._registry = {}
 
-    def debug_print(self):
-        import pprint
-        pprint.pprint(self._registry)
+
