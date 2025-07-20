@@ -45,19 +45,21 @@ class Blockchain:
                 with open(BLOCKCHAIN_FILE, "r") as f:
                     content = f.read().strip()
                     if not content:
-                        raise ValueError("File blockchain vuoto")
+                        genesis = self._create_genesis_block()
+                        self._save_chain([genesis])
+                        return [genesis]
                     data = json.loads(content)
                     return [Block.from_dict(b) for b in data]
             except Exception as e:
                 print(f"⚠️ Errore durante il caricamento della blockchain: {e}")
-                print("📄 Rigenerazione della blockchain con Genesis Block...")
-                genesis = self._create_genesis_block()
-                self._save_chain([genesis])
-            return [genesis]
+                print("❗ Non sovrascrivo il file. Crea manualmente backup o correggi il file JSON.")
+                raise e  # o return []
         else:
+            # se il file non esiste, crea la genesis chain
             genesis = self._create_genesis_block()
             self._save_chain([genesis])
             return [genesis]
+
 
     def _save_chain(self, chain):
         with open(BLOCKCHAIN_FILE, "w") as f:
@@ -67,6 +69,7 @@ class Blockchain:
         return self.chain[-1]
 
     def add_block(self, data):
+        self.chain = self._load_chain()
         latest = self.get_latest_block()
         new_block = Block(index=latest.index + 1, previous_hash=latest.hash, data=data)
         self.chain.append(new_block)

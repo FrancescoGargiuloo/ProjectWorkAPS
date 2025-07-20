@@ -78,7 +78,7 @@ class UniversitySalerno(BaseUniversity):
             "type": "EligibilityCredential",
             "studentDID": student.did,
             "issuer": self.did
-        })
+            })
 
         credential_data["evidence"] = {
             "type": "BlockchainRecord",
@@ -101,7 +101,7 @@ class UniversitySalerno(BaseUniversity):
             "verificationMethod": f"{self.did}#key-1",
             "jws": signature
         }
-        
+
         self.revocation_registry.create_revocation_entry(
             namespace=revocation_namespace,
             list_id=revocation_list_id,
