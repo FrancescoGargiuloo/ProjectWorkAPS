@@ -1,4 +1,3 @@
-# Importo le librerie che mi servono per lavorare
 import os
 import json
 import uuid
@@ -6,19 +5,23 @@ from Student import Student
 from UniversitySalerno import UniversitySalerno
 from UniversityRennes import UniversityRennes
 import shutil
-# Qui definisco le cartelle dove verranno salvati i file di database, chiavi, credenziali e DIDs
 BASE_DIR = os.path.dirname(__file__)
-
-# Questa lista mi serve per sapere quali studenti ho registrato, utile per fare la pulizia finale
 REGISTERED_STUDENTS_FOR_CLEANUP = []
 
+
+# --- Funzione per eliminare un file, se esiste ---
+def _delete_dir_if_exists(dir_path):
+    """Elimino una directory e tutto il suo contenuto se esiste."""
+    if os.path.exists(dir_path) and os.path.isdir(dir_path):
+        shutil.rmtree(dir_path)
+        print(f"Eliminata directory: {dir_path}")
 
 # --- Funzione per eliminare un file, se esiste ---
 def _delete_file_if_exists(file_path):
     """Cancello il file solo se esiste (evito errori inutili)."""
     if os.path.exists(file_path):
         os.remove(file_path)
-        print(f"Eliminato: {file_path}")
+        print(f"Eliminato file: {file_path}")
 
 
 # --- Pulizia totale dei dati generati ---
@@ -29,34 +32,26 @@ def cleanup_all_data():
     print("\n" + "=" * 50)
     print("==== FASE DI PULIZIA DATI ====")
     print("=" * 50)
+    DB_DIR = os.path.join(BASE_DIR, "database")
+    _delete_dir_if_exists(DB_DIR)
 
-    # Percorsi per pulizia Unisa
+    KEY_DIR = os.path.join(BASE_DIR, "keys")
+    _delete_dir_if_exists(KEY_DIR)
+
     UNISA_DIR = os.path.join(BASE_DIR, "unisa")
-    _delete_file_if_exists(os.path.join(UNISA_DIR, "keys", "unisa_priv.pem"))
-    _delete_file_if_exists(os.path.join(UNISA_DIR, "keys", "unisa_pub.pem"))
-    _delete_file_if_exists(os.path.join(UNISA_DIR, "DID", "unisa_did.json"))
+    _delete_dir_if_exists(UNISA_DIR)
 
-    # Percorsi per pulizia Rennes
     RENNES_DIR = os.path.join(BASE_DIR, "rennes")
-    _delete_file_if_exists(os.path.join(RENNES_DIR, "keys", "rennes_priv.pem"))
-    _delete_file_if_exists(os.path.join(RENNES_DIR, "keys", "rennes_pub.pem"))
-    _delete_file_if_exists(os.path.join(RENNES_DIR, "DID", "rennes_did.json"))
+    _delete_dir_if_exists(RENNES_DIR)
 
-    # Cancello tutto quello che riguarda gli studenti registrati
+    # Cleanup di tutte le wallet degli studenti
     for student_data in REGISTERED_STUDENTS_FOR_CLEANUP:
         username = student_data["username"]
-        user_id = student_data["user_id"]
-
         wallet_folder = os.path.join(BASE_DIR, f"wallet-{username}")
+        _delete_dir_if_exists(wallet_folder)
 
-        # Cancello chiavi dello studente
-        _delete_file_if_exists(os.path.join(wallet_folder, "keys", f"{username}_priv.pem"))
-        _delete_file_if_exists(os.path.join(wallet_folder, "keys", f"{username}_pub.pem"))
-
-        # Cancello il file DID dello studente
-        for file in os.listdir(os.path.join(wallet_folder, "did")):
-            if file.endswith("_did.json"):
-                _delete_file_if_exists(os.path.join(wallet_folder, "did", file))
+    _delete_file_if_exists(os.path.join(BASE_DIR, "shared_blockchain.json"))
+    _delete_file_if_exists(os.path.join(BASE_DIR, "revocation_registry.json"))
 
     print("\n✅ Pulizia completata.")
     print("=" * 50)
@@ -125,7 +120,7 @@ def phase_1_student_creation(university_salerno, university_rennes):
         student_obj = Student(username, password, user_id, first_name, last_name)
 
         # Registrazione a Salerno
-        if university_salerno.register_student(user_id, username, password, first_name, last_name, student_obj.get_public_key()):
+        if university_salerno.register_student(user_id, username, password, first_name, last_name):
             university_salerno.assign_did_to_student(user_id, student_obj.did, student_obj.get_public_key())
             print(f"✅ {username} registrato a UniSA")
         else:
@@ -133,7 +128,7 @@ def phase_1_student_creation(university_salerno, university_rennes):
             continue
 
         # Registrazione anche a Rennes
-        if university_rennes.register_student(user_id, username, password, first_name, last_name, student_obj.get_public_key()):
+        if university_rennes.register_student(user_id, username, password, first_name, last_name):
             university_rennes.assign_did_to_student(user_id, student_obj.did, student_obj.get_public_key())
             print(f"✅ {username} registrato a Rennes")
         else:
@@ -267,8 +262,7 @@ def phase_5_selective_presentation(authenticated_students, university_salerno, u
 
             with open(os.path.join(student.get_wallet_path(),"credentials", f"{student.username}_vp.json")) as f:
                 presentation = json.load(f)
-            if student == authenticated_students[1]:
-                presentation1 = presentation
+
 
             print(f"➡️ UniSA verifica la presentazione di {student.username}")
             result = university_salerno.verify_selective_presentation(presentation)
@@ -282,7 +276,6 @@ def phase_5_selective_presentation(authenticated_students, university_salerno, u
             print(f"❌ Errore con presentazione: {e}")
 
     print("\n✅ FASE 5 completata.")
-    return presentation1
 
 # --- FASE 6: Revoca credenziali ---
 def phase_6_revoke_multiple_credentials(erasmus_student, academic_student, university_salerno, university_rennes):
@@ -311,10 +304,8 @@ def phase_6_revoke_multiple_credentials(erasmus_student, academic_student, unive
 
 
 # --- FASE 7: Tentativo di riuso dopo revoca ---
-def phase_7_re_presentation_after_revocation(erasmus_student, academic_student, presentation, university_salerno, university_rennes):
-    """
-    Gli studenti provano a riutilizzare credenziali già revocate
-    """
+def phase_7_re_presentation_after_revocation(erasmus_student, academic_student, university_salerno, university_rennes):
+
     print("\n" + "=" * 50)
     print("==== FASE 7: RIUTILIZZO DOPO REVOCA ====")
     print("=" * 50)
@@ -332,12 +323,21 @@ def phase_7_re_presentation_after_revocation(erasmus_student, academic_student, 
 
     # Accademica
     print(f"\n➡️ {academic_student.username} riprova a usare la presentazione accademica")
+    path = os.path.join(academic_student.get_wallet_path(), "credentials", f"{academic_student.username}_vp.json")
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            presentation = json.load(f)
+    except FileNotFoundError:
+        print("❌ Presentazione accademica non trovata")
+        return
+
     if not university_salerno.verify_selective_presentation(presentation):
         print("✅ Revoca accademica funzionante (non è più valida)")
     else:
         print("⚠️ ERRORE: Accademica ancora valida dopo revoca!")
 
     print("\n✅ FASE 7 completata.")
+
 
 
 # --- ESECUZIONE AUTOMATICA DEL FLUSSO COMPLETO ---
@@ -368,6 +368,7 @@ if __name__ == "__main__":
 
     phase_3_issue_erasmus_credential_unisa(authenticated_students, salerno_university)
     phase_4_request_grades_rennes(authenticated_students, rennes_university, salerno_university)
-    presentation = phase_5_selective_presentation(authenticated_students, salerno_university, rennes_university)
+    phase_5_selective_presentation(authenticated_students, salerno_university, rennes_university)
     phase_6_revoke_multiple_credentials(student_for_erasmus_revoke, student_for_academic_revoke, salerno_university, rennes_university)
-    phase_7_re_presentation_after_revocation(student_for_erasmus_revoke, student_for_academic_revoke, presentation, salerno_university, rennes_university)
+    phase_7_re_presentation_after_revocation(student_for_erasmus_revoke, student_for_academic_revoke, salerno_university, rennes_university)
+    #cleanup_all_data()

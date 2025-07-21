@@ -100,12 +100,9 @@ class BaseUniversity:
             raise Exception(f"DID document non trovato per {did}")
         with open(path, "r") as f:
             return json.load(f)
-        
-    def register_student(self, user_id, username, password, first_name, last_name, public_key_pem):
-        success = self.user_manager.first_login(user_id, username, password, first_name, last_name)
-        if success:
-            return self.user_manager.update_user_did_and_public_key(user_id, "", public_key_pem)
-        return False
+
+    def register_student(self, user_id, username, password, first_name, last_name):
+        return self.user_manager.first_login(user_id, username, password, first_name, last_name)
 
     def authenticate_student(self, username, password):
         return self.user_manager.authenticate_user(username, password)

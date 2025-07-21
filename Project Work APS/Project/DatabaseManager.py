@@ -49,11 +49,14 @@ class DatabaseManager:
 
         # Generate a new key if file doesn't exist or existing key was invalid
         key = Fernet.generate_key()
+
+        # ✅ Assicurati che la directory esista
+        os.makedirs(os.path.dirname(self.encryption_key_path), exist_ok=True)
+
         with open(self.encryption_key_path, 'wb') as key_file:
             key_file.write(key)
         print(f"🔑 Nuova chiave di crittografia generata e salvata in {self.encryption_key_path}")
         return key
-
     def _encrypt_db(self, db_data):
         """
         Cripta i dati del database.
@@ -84,8 +87,13 @@ class DatabaseManager:
     def _load_db(self):
         """
         Carica e decripta il database.
+        Se il file non esiste, lo crea con una struttura base.
         :return: Dizionario contenente i dati del DB, o una struttura vuota in caso di errore.
         """
+        if not os.path.exists(self.db_file):
+            print(f"📂 Il file {self.db_file} non esiste. Creo un DB vuoto.")
+            self._save_db({"users": []})
+
         try:
             with open(self.db_file, 'rb') as file:
                 encrypted_data = file.read()
@@ -94,16 +102,13 @@ class DatabaseManager:
             print(f"[!] Errore durante il caricamento del DB {self.db_file}: {e}")
             return {"users": []}
 
-    def _save_db(self, db_data):
-        """
-        Cripta e salva il database.
-        :param db_data: Dizionario contenente i dati del DB da salvare.
-        :return: True se il salvataggio ha successo, False altrimenti.
-        """
+    def _save_db(self, data):
         try:
-            encrypted_data = self._encrypt_db(db_data)
+            os.makedirs(os.path.dirname(self.db_file), exist_ok=True)  # crea cartella se manca
+            encrypted_data = self._encrypt_db(data)
             with open(self.db_file, 'wb') as file:
                 file.write(encrypted_data)
+            print(f"💾 DB salvato correttamente in {self.db_file}")
             return True
         except Exception as e:
             print(f"[!] Errore salvataggio DB {self.db_file}: {e}")

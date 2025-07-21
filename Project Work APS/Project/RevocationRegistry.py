@@ -1,7 +1,6 @@
 import hashlib
 import json
 import os
-from typing import Dict
 
 BASE_DIR = os.path.dirname(__file__)
 REGISTRY_FILE = os.path.join(BASE_DIR, "revocation_registry.json")

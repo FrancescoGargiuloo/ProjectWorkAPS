@@ -120,7 +120,7 @@ class UniversityRennes(BaseUniversity):
                 print("⚠️ Stato di revoca non trovato. Credenziale potenzialmente non valida.")
                 return False
             elif is_revoked:
-                print("❌ Credenziale revocata.")
+                print("❌ La credenziale è stata revocata.")
                 return False
             else:
                 print("✅ Credenziale NON revocata.")
