@@ -170,7 +170,6 @@ class Student:
         Permette di specificare quali campi rivelare da ciascun esame.
         Se reveal_fields non è specificato, rivela un set predefinito (es. tutti i voti e crediti).
 
-        :param target_university_did: Il DID dell'università a cui si sta presentando (es. did:web:unisa.it).
         :param reveal_fields: Un dizionario che specifica quali campi rivelare per ogni esame.
                               Formato: { "examId": {"field1": True, "field2": False}, ... }
                               Se un campo non è presente o è False, il suo valore non verrà rivelato,
