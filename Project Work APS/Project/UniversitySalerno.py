@@ -34,8 +34,15 @@ class UniversitySalerno(BaseUniversity):
         """
         Genera una credenziale Erasmus per uno studente.
         La credenziale viene firmata e il suo hash registrato sulla blockchain.
+        Controlla se la credenziale esiste già prima di generarne una nuova.
         :param student: L'oggetto studente per cui generare la credenziale.
         """
+        filepath = os.path.join(student.get_wallet_path(), "credentials", f"{student.username}_erasmus_credential.json")
+
+        if os.path.exists(filepath):
+            print(f"⚠️ Credenziale Erasmus per lo studente {student.username} esiste già. Saltando la generazione.")
+            return None
+
         issuance_date = datetime.now(timezone.utc).isoformat() + "Z"
         expiration_date = (datetime.now(timezone.utc) + timedelta(days=365)).isoformat() + "Z"
 
@@ -80,7 +87,7 @@ class UniversitySalerno(BaseUniversity):
             "type": "EligibilityCredential",
             "studentDID": student.did,
             "issuer": self.did
-            })
+        })
 
         credential_data["evidence"] = {
             "type": "BlockchainRecord",
@@ -109,11 +116,11 @@ class UniversitySalerno(BaseUniversity):
             list_id=revocation_list_id,
             revocation_key=revocation_key
         )
-        filepath = os.path.join(student.get_wallet_path(), "credentials", f"{student.username}_erasmus_credential.json")
+
         with open(filepath, "w") as f:
             json.dump(credential_data, f, indent=2)
 
-        print(f"Credenziale Erasmus salvata")
+        print(f"✅ Credenziale Erasmus salvata in: {filepath}")
 
     def verify_selective_presentation(self, presentation: dict) -> bool:
         """
@@ -159,41 +166,36 @@ class UniversitySalerno(BaseUniversity):
             )
             print("✅ Firma della presentazione valida.")
 
-            # 4. Estrai la VC dalla presentazione
+            # 2. Estrai la VC dalla presentazione
             vc = presentation["verifiableCredential"]
 
-            # --- Inizio del controllo di validità temporale (aggiunto) ---
             expiration_str = vc.get("expirationDate")
             if expiration_str:
                 try:
-                    # Tenta di parsare direttamente
                     expiration_date = datetime.fromisoformat(expiration_str)
                 except ValueError:
-                    # Se fallisce, prova a rimuovere la 'Z' finale e a riprovare
                     try:
                         if expiration_str.endswith('Z'):
                             expiration_date = datetime.fromisoformat(expiration_str[:-1])
                         else:
-                            raise  # Rilancia se non è una Z finale il problema
+                            raise
                     except ValueError:
                         print(f"❌ Formato data di scadenza non valido: {expiration_str}. Processo interrotto.")
-                        return False  # Interrompi se il formato è invalido
+                        return False
 
                 now = datetime.now(tz=timezone.utc)
-                if expiration_date.tzinfo is None:  # Se la data parsata non ha info sul fuso orario, assumi UTC
+                if expiration_date.tzinfo is None:
                     expiration_date = expiration_date.replace(tzinfo=timezone.utc)
 
                 if now > expiration_date:
                     print("❌ La credenziale è scaduta. Processo interrotto.")
-                    return False  # Interrompi qui
+                    return False
                 else:
                     print("✅ La credenziale è ancora valida temporalmente.")
             else:
                 print("Nessuna data di scadenza specificata per questa credenziale nella presentazione.")
-            # --- Fine del controllo di validità temporale ---
 
-
-            # 5. Recupera la Merkle Root dalla blockchain
+            # 3. Recupera la Merkle Root dalla blockchain
             tx_hash = vc["evidence"]["transactionHash"]
             on_chain_root = self.blockchain.get_merkle_root(tx_hash)
             if not on_chain_root:
@@ -201,7 +203,7 @@ class UniversitySalerno(BaseUniversity):
                 return False
             print(f"✅ Merkle Root recuperata: {on_chain_root}")
 
-            # 6. Verifica lo stato di revoca
+            # 4. Verifica lo stato di revoca
             status = vc["credentialStatus"]
             is_revoked = self.revocation_registry.is_revoked(
                 namespace=status["namespace"],
@@ -213,7 +215,7 @@ class UniversitySalerno(BaseUniversity):
                 return False
             print("✅ Credenziale NON revocata.")
 
-            # 7. Verifica delle Merkle Proof fornite per ogni campo rivelato
+            # 5. Verifica delle Merkle Proof fornite per ogni campo rivelato
             revealed = vc["credentialSubject"]["proofs"]
             for exam_id, fields in revealed.items():
                 for field, data in fields.items():
@@ -233,14 +235,14 @@ class UniversitySalerno(BaseUniversity):
 
             print("✅ Tutte le Merkle proof sono valide.")
 
-            # 8. Ricostruzione della Merkle Root completa e confronto con on-chain
+            # 6. Ricostruzione della Merkle Root completa e confronto con on-chain
             reconstructed = reconstruct_merkle_root(revealed)
             if reconstructed != on_chain_root:
                 print("❌ La Merkle Root ricostruita non coincide con quella on-chain.")
                 return False
             print("✅ Merkle Root ricostruita corrisponde alla root on-chain.")
 
-            # 9. Tutto ok
+            # 7. Tutto ok
             print("🎓 Verifica completata. Presentazione valida.")
             return True
 

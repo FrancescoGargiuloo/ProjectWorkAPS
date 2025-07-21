@@ -1,5 +1,5 @@
 import os, json, base64
-from datetime import datetime, timezone, timedelta # Aggiunto timedelta
+from datetime import datetime, timezone, timedelta
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.exceptions import InvalidSignature
@@ -84,26 +84,24 @@ class UniversityRennes(BaseUniversity):
             expiration_str = credential.get("expirationDate")
             if expiration_str:
                 try:
-                    # Tenta di parsare direttamente
                     expiration_date = datetime.fromisoformat(expiration_str)
                 except ValueError:
-                    # Se fallisce, prova a rimuovere la 'Z' finale e a riprovare
                     try:
                         if expiration_str.endswith('Z'):
                             expiration_date = datetime.fromisoformat(expiration_str[:-1])
                         else:
-                            raise  # Rilancia se non è una Z finale il problema
+                            raise
                     except ValueError:
                         print(f"❌ Formato data di scadenza non valido: {expiration_str}. Processo interrotto.")
-                        return False  # Interrompi se il formato è invalido
+                        return False
 
                 now = datetime.now(tz=timezone.utc)
-                if expiration_date.tzinfo is None:  # Se la data parsata non ha info sul fuso orario, assumi UTC
+                if expiration_date.tzinfo is None:
                     expiration_date = expiration_date.replace(tzinfo=timezone.utc)
 
                 if now > expiration_date:
                     print("❌ La credenziale è scaduta. Processo interrotto.")
-                    return False  # Interrompi qui
+                    return False
                 else:
                     print("✅ La credenziale è ancora valida temporalmente.")
             else:
@@ -124,7 +122,7 @@ class UniversityRennes(BaseUniversity):
                 return False
             else:
                 print("✅ Credenziale NON revocata.")
-                return True # Restituisci True se tutte le validazioni passano
+                return True
 
         except InvalidSignature:
             print("❌ Firma della credenziale Erasmus non valida.")
@@ -148,6 +146,12 @@ class UniversityRennes(BaseUniversity):
         :param student: L'oggetto studente per cui generare la credenziale.
         :param exams: Una lista di dizionari, ognuno rappresentante un esame.
         """
+        filepath = os.path.join(student.get_wallet_path(), "credentials", f"{student.username}_academic_credential.json")
+
+        if os.path.exists(filepath):
+            print(f"⚠️ Credenziale Erasmus per lo studente {student.username} esiste già. Saltando la generazione.")
+            return None
+
         issuance_date = datetime.now(timezone.utc).isoformat() + "Z"
         expiration_date = (datetime.now(timezone.utc) + timedelta(days=730)).isoformat() + "Z"
         credential_id = f"urn:uuid:{student.username}-academic-cred"
@@ -190,13 +194,13 @@ class UniversityRennes(BaseUniversity):
             "type": ["VerifiableCredential", "AcademicCredential"],
             "issuer": self.did,
             "issuanceDate": issuance_date,
-            "expirationDate": expiration_date, # Aggiunto il campo expirationDate
+            "expirationDate": expiration_date,
             "credentialSubject": {
                 "id": student.did,
                 "givenName": student.first_name or "N/A",
                 "familyName": student.last_name or "N/A",
                 "homeUniversity": "Universita' di Salerno",
-                "exams": exams  # Gli esami completi sono inclusi qui
+                "exams": exams
             },
             "credentialStatus": {
                 "id": f"https://consorzio-univ.it/creds/{student.username}-academic-status",

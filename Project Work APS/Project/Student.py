@@ -2,7 +2,7 @@ import os, json, base64
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from datetime import datetime, timezone
-from MerkleTree import hash_leaf, build_merkle_proof # Assicurati che build_merkle_proof sia correttamente implementata in MerkleTree.py
+from MerkleTree import hash_leaf, build_merkle_proof
 import uuid
 
 BASE_DIR = os.path.dirname(__file__)
@@ -76,9 +76,8 @@ class Student:
         Restituisce la chiave pubblica dello studente in formato PEM.
         :return: La chiave pubblica in formato stringa PEM.
         """
-        # Assicurati che il file esista prima di tentare di leggerlo
         if not os.path.exists(self.pub_path):
-            self._generate_keypair() # Genera se non esiste
+            self._generate_keypair()
         with open(self.pub_path, "rb") as f:
             return f.read().decode()
 
@@ -165,7 +164,7 @@ class Student:
             print(f"❌ Errore di parsing della credenziale Accademica per {self.username}.")
             return None
 
-    def generate_selective_presentation_automated(self, target_university_did: str, reveal_fields: dict = None):
+    def generate_selective_presentation_automated(self, reveal_fields: dict = None):
         """
         Genera una presentazione selettiva in modo automatizzato.
         Permette di specificare quali campi rivelare da ciascun esame.
@@ -189,9 +188,8 @@ class Student:
         leaves = []
         leaf_lookup = {}  # Mappa hash della foglia all'oggetto foglia {hash: {examId, field, value}}
         for exam in original_exams:
-            # Assicurati che ogni esame abbia un ID. Se manca, genera uno temporaneo.
+            # Assicurati che ogni esame abbia un ID.
             exam_id = exam.get("examId", str(uuid.uuid4()))
-            # Aggiungi l'examId all'esame se non esiste per coerenza
             if "examId" not in exam:
                 exam["examId"] = exam_id
 
@@ -207,14 +205,14 @@ class Student:
         for h, leaf in leaf_lookup.items():
             exam_id = leaf["examId"]
             field = leaf["field"]
-            proof = build_merkle_proof(h, leaves) # build_merkle_proof deve essere implementata in MerkleTree.py
+            proof = build_merkle_proof(h, leaves)
 
             if exam_id not in full_proofs:
                 full_proofs[exam_id] = {}
 
             full_proofs[exam_id][field] = {
                 "proof": proof,
-                "value": leaf["value"]  # Questo valore verrà rimosso se il campo è nascosto
+                "value": leaf["value"]
             }
 
         # 3. Determina quali campi rivelare in base a 'reveal_fields' o a un set predefinito
@@ -245,7 +243,6 @@ class Student:
                             if exam_id in full_proofs and field in full_proofs[exam_id]:
                                 full_proofs[exam_id][field].pop("value", None) # Rimuovi il valore rivelato
                                 full_proofs[exam_id][field]["leafHash"] = leaf_hash # Includi solo l'hash della foglia
-                    # Assicurati che il nome dell'esame sia sempre presente se l'esame è incluso nella rivelazione
                     if "name" in exam and "name" not in selected_claims[exam_id]:
                         selected_claims[exam_id]["name"] = exam["name"]
 
@@ -255,7 +252,6 @@ class Student:
             return None
 
         # 4. Costruisci il credentialSubject per la presentazione
-        # Contiene i claims rivelati e le Merkle proofs complete (alcune con valori, altre solo con hash)
         presentation_credential_subject = {
             "id": academic_cred["credentialSubject"]["id"],
             "givenName": academic_cred["credentialSubject"]["givenName"],
@@ -274,27 +270,20 @@ class Student:
             "type": ["VerifiablePresentation"],
             "holder": self.did,
             "verifiableCredential": {
-                **academic_cred, # Includi l'intera credenziale accademica originale
-                "credentialSubject": presentation_credential_subject # Sovrascrivi con il soggetto modificato per la presentazione
+                **academic_cred,
+                "credentialSubject": presentation_credential_subject
             }
         }
-
-        # Rimuovi la 'proof' della VC interna prima di firmare la VP, se presente, per evitare firme annidate non desiderate
-        # La VP firma la VC completa (con la sua proof) ma la sua stessa proof è esterna.
-        # Per questa implementazione, la VP firma l'intera VC come payload, inclusa la sua proof interna.
-        # La proof della VP è aggiunta separatamente.
-        # Questo è il comportamento standard per le VPs che contengono VC "embedded".
 
         nonce = base64.b64encode(os.urandom(16)).decode()
         created = datetime.now(timezone.utc).isoformat() + "Z"
 
-        # 6. Firma tutta la presentazione (senza il campo 'proof' della VP)
-        # Il payload da firmare è la rappresentazione JSON canonica della VP senza la sua proof.
+        # 6. Firma tutta la presentazione
         to_sign = json.dumps(vp_to_sign, sort_keys=True)
         signature = self.sign(to_sign)
 
         # 7. Aggiungi la prova con la firma alla Verifiable Presentation
-        vp = vp_to_sign.copy() # Copia la VP_to_sign per aggiungere la proof
+        vp = vp_to_sign.copy()
         vp["proof"] = {
             "type": "RsaSignature2023",
             "created": created,

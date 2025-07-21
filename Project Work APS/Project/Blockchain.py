@@ -57,7 +57,6 @@ class Blockchain:
                 print("❗ Non sovrascrivo il file. Crea manualmente backup o correggi il file JSON.")
                 raise e
         else:
-            # se il file non esiste, crea la genesis chain
             genesis = self._create_genesis_block()
             self._save_chain([genesis])
             return [genesis]
@@ -93,8 +92,6 @@ class Blockchain:
         self.chain = self._load_chain()
         for block in self.chain:
             if block.hash == tx_hash:
-                # supponendo che la Merkle Root sia salvata come:
-                # block.data = {"merkleRoot": "...", ...}
                 if isinstance(block.data, dict) and "merkleRoot" in block.data:
                     return block.data["merkleRoot"]
                 else:

@@ -4,6 +4,7 @@ from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.exceptions import InvalidSignature
 BASE_DIR = os.path.dirname(__file__)
+
 class BaseUniversity:
     def __init__(self, did, priv_key_filename, pub_key_filename, db_name, keys_folder, did_folder, trusted_did_folder, user_manager_cls, blockchain_cls, revocation_registry_cls, folder):
         os.makedirs(folder, exist_ok=True)
@@ -77,13 +78,8 @@ class BaseUniversity:
             raise Exception(f"DID non conforme, impossibile estrarre nome_cognome da {did}")
 
         username = parts[0] + "." + parts[1]  # es: "mario.rossi"
-
-        # Cartella wallet per l’utente
         wallet_folder = os.path.join(BASE_DIR, f"wallet-{username}")
-
-        # Ora il filename deve essere did_part con '.' sostituiti da '_' più _did.json
         filename = did_part.replace(".", "_") + "_did.json"
-
         did_path = os.path.join(wallet_folder, "did", filename)
 
         if not os.path.exists(did_path):

@@ -2,7 +2,7 @@ import os
 import json
 from datetime import datetime
 from cryptography.fernet import Fernet
-from PasswordManager import PasswordManager  # Assumendo che questa classe esista e sia corretta
+from PasswordManager import PasswordManager
 
 BASE_DIR = os.path.dirname(__file__)
 DB_FOLDER = os.path.join(BASE_DIR, "database")
@@ -38,19 +38,15 @@ class DatabaseManager:
             try:
                 with open(self.encryption_key_path, 'rb') as key_file:
                     key = key_file.read()
-                # Test the key to ensure it's valid Fernet key
-                Fernet(key)  # This will raise an error if the key is malformed
+                Fernet(key)
                 print(f"✔️ Chiave di crittografia caricata da {self.encryption_key_path}")
                 return key
             except Exception as e:
                 print(
                     f"⚠️ Errore durante il caricamento o la validazione della chiave esistente ({self.encryption_key_path}): {e}. Genero una nuova chiave.")
-                # If loading or validating fails, proceed to generate a new key
 
-        # Generate a new key if file doesn't exist or existing key was invalid
         key = Fernet.generate_key()
 
-        # ✅ Assicurati che la directory esista
         os.makedirs(os.path.dirname(self.encryption_key_path), exist_ok=True)
 
         with open(self.encryption_key_path, 'wb') as key_file:
@@ -154,8 +150,8 @@ class UserManager(DatabaseManager):
             "salt": salt,
             "first_name": first_name,
             "last_name": last_name,
-            "did": "",  # Il DID verrà assegnato in un passo successivo tramite update_user_did_and_public_key
-            "public_key_pem": public_key_pem,  # Salva la chiave pubblica
+            "did": "",
+            "public_key_pem": public_key_pem,
             "created_at": datetime.now().isoformat()
         })
         return self._save_db(db)

@@ -9,14 +9,12 @@ BASE_DIR = os.path.dirname(__file__)
 REGISTERED_STUDENTS_FOR_CLEANUP = []
 
 
-# --- Funzione per eliminare un file, se esiste ---
 def _delete_dir_if_exists(dir_path):
     """Elimino una directory e tutto il suo contenuto se esiste."""
     if os.path.exists(dir_path) and os.path.isdir(dir_path):
         shutil.rmtree(dir_path)
         print(f"Eliminata directory: {dir_path}")
 
-# --- Funzione per eliminare un file, se esiste ---
 def _delete_file_if_exists(file_path):
     """Cancello il file solo se esiste (evito errori inutili)."""
     if os.path.exists(file_path):
@@ -44,7 +42,6 @@ def cleanup_all_data():
     RENNES_DIR = os.path.join(BASE_DIR, "rennes")
     _delete_dir_if_exists(RENNES_DIR)
 
-    # Cleanup di tutte le wallet degli studenti
     for student_data in REGISTERED_STUDENTS_FOR_CLEANUP:
         username = student_data["username"]
         wallet_folder = os.path.join(BASE_DIR, f"wallet-{username}")
@@ -77,12 +74,11 @@ def distribute_dids_among_trusted_folders(universities):
     Per ogni università, copia i DID delle altre università nella sua cartella trusted_did_folder.
     """
     for uni_target in universities:
-        # Assicuriamoci che la cartella trusted_did_folder esista
         os.makedirs(uni_target.trusted_did_folder, exist_ok=True)
 
         for uni_source in universities:
             if uni_source == uni_target:
-                continue  # Non copiare i propri DID nella trusted di sé stessi
+                continue
 
             # Lista dei DID nella did_folder della uni_source
             did_files = [f for f in os.listdir(uni_source.did_folder) if f.endswith("_did.json")]
@@ -199,8 +195,9 @@ def phase_3_issue_erasmus_credential_unisa(authenticated_students, university_sa
 
     for student in authenticated_students:
         print(f"\n➡️ {student.username} richiede credenziale Erasmus")
-        university_salerno.generate_erasmus_credential(student)
-        print(f"✅ Credenziale Erasmus generata")
+        result = university_salerno.generate_erasmus_credential(student)
+        if result:  # Solo se la credenziale è stata realmente generata
+            print(f"✅ Credenziale Erasmus generata")
 
     print("\n✅ FASE 3 completata.")
 
@@ -239,10 +236,12 @@ def phase_4_request_grades_rennes(authenticated_students, university_rennes, uni
             university_salerno.revocate_credential(erasmus_cred)
             continue
 
-        university_rennes.generate_academic_credential(student, all_exams_data)
-        print("✅ Credenziale accademica generata")
+        result = university_rennes.generate_academic_credential(student, all_exams_data)
+        if result:
+            print("✅ Credenziale accademica generata")
 
     print("\n✅ FASE 4 completata.")
+
 
 
 # --- FASE 5: Presentazione selettiva ---
@@ -257,7 +256,7 @@ def phase_5_selective_presentation(authenticated_students, university_salerno, u
     for student in authenticated_students:
         print(f"\n➡️ Generazione presentazione per {student.username}")
         try:
-            student.generate_selective_presentation_automated(university_salerno.did)
+            student.generate_selective_presentation_automated()
             print("✅ Presentazione generata")
 
             with open(os.path.join(student.get_wallet_path(),"credentials", f"{student.username}_vp.json")) as f:
