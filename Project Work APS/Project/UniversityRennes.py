@@ -191,10 +191,6 @@ class UniversityRennes(BaseUniversity):
             "issuer": self.did,
             "issuanceDate": issuance_date,
             "expirationDate": expiration_date, # Aggiunto il campo expirationDate
-            "credentialSchema": {
-                "id": "https://consorzio.example/schema/academic-v1",
-                "type": "JsonSchema"
-            },
             "credentialSubject": {
                 "id": student.did,
                 "givenName": student.first_name or "N/A",
