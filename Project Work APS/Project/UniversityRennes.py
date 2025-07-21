@@ -149,7 +149,7 @@ class UniversityRennes(BaseUniversity):
         :param exams: Una lista di dizionari, ognuno rappresentante un esame.
         """
         issuance_date = datetime.now(timezone.utc).isoformat() + "Z"
-        expiration_date = (datetime.now(timezone.utc) + timedelta(days=365)).isoformat() + "Z"
+        expiration_date = (datetime.now(timezone.utc) + timedelta(days=730)).isoformat() + "Z"
         credential_id = f"urn:uuid:{student.username}-academic-cred"
         revocation_namespace = "rennes"
         category_id = "anno2025"
