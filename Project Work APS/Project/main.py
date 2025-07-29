@@ -270,7 +270,10 @@ def phase_5_selective_presentation(authenticated_students, university_salerno, u
                 print("✅ Presentazione valida")
             else:
                 print("❌ Presentazione non valida. Invio revoca a Rennes.")
-                university_rennes.revocate_credential(presentation)
+                vc = presentation.get("verifiableCredential")
+                if not vc:
+                    print("❌ VP non contiene una credenziale verificabile valida.")
+                university_rennes.revocate_credential(vc)
         except Exception as e:
             print(f"❌ Errore con presentazione: {e}")
 
