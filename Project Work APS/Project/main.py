@@ -231,7 +231,7 @@ def phase_4_request_grades_rennes(authenticated_students, university_rennes, uni
             print("❌ Nessuna credenziale Erasmus trovata")
             continue
 
-        if not university_rennes.verify_erasmus_credential(erasmus_cred):
+        if not university_rennes.verify_erasmus_credential(erasmus_cred, student):
             print("❌ Erasmus non valida. Revoca inviata a UniSA.")
             university_salerno.revocate_credential(erasmus_cred)
             continue
@@ -264,7 +264,7 @@ def phase_5_selective_presentation(authenticated_students, university_salerno, u
 
 
             print(f"➡️ UniSA verifica la presentazione di {student.username}")
-            result = university_salerno.verify_selective_presentation(presentation)
+            result = university_salerno.verify_selective_presentation(presentation, student)
 
             if result:
                 print("✅ Presentazione valida")
@@ -315,7 +315,7 @@ def phase_7_re_presentation_after_revocation(erasmus_student, academic_student, 
     if not erasmus_cred:
         print("❌ Nessuna credenziale Erasmus trovata")
     else:
-        if not university_rennes.verify_erasmus_credential(erasmus_cred):
+        if not university_rennes.verify_erasmus_credential(erasmus_cred, erasmus_student):
             print("✅ Revoca Erasmus funzionante (non è più valida)")
         else:
             print("⚠️ ERRORE: Erasmus ancora valida dopo revoca!")
@@ -330,7 +330,7 @@ def phase_7_re_presentation_after_revocation(erasmus_student, academic_student, 
         print("❌ Presentazione accademica non trovata")
         return
 
-    if not university_salerno.verify_selective_presentation(presentation):
+    if not university_salerno.verify_selective_presentation(presentation, academic_student):
         print("✅ Revoca accademica funzionante (non è più valida)")
     else:
         print("⚠️ ERRORE: Accademica ancora valida dopo revoca!")
@@ -338,11 +338,9 @@ def phase_7_re_presentation_after_revocation(erasmus_student, academic_student, 
     print("\n✅ FASE 7 completata.")
 
 
-
 # --- ESECUZIONE AUTOMATICA DEL FLUSSO COMPLETO ---
 if __name__ == "__main__":
     cleanup_all_data()
-
     salerno_university, rennes_university = phase_0_initialization()
 
     students = phase_1_student_creation(salerno_university, rennes_university)
@@ -368,6 +366,8 @@ if __name__ == "__main__":
     phase_3_issue_erasmus_credential_unisa(authenticated_students, salerno_university)
     phase_4_request_grades_rennes(authenticated_students, rennes_university, salerno_university)
     phase_5_selective_presentation(authenticated_students, salerno_university, rennes_university)
-    phase_6_revoke_multiple_credentials(student_for_erasmus_revoke, student_for_academic_revoke, salerno_university, rennes_university)
-    phase_7_re_presentation_after_revocation(student_for_erasmus_revoke, student_for_academic_revoke, salerno_university, rennes_university)
+    phase_6_revoke_multiple_credentials(student_for_erasmus_revoke, student_for_academic_revoke, salerno_university,
+                                        rennes_university)
+    phase_7_re_presentation_after_revocation(student_for_erasmus_revoke, student_for_academic_revoke,
+                                             salerno_university, rennes_university)
     #cleanup_all_data()

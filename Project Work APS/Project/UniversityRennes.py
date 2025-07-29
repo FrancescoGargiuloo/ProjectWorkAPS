@@ -31,11 +31,13 @@ class UniversityRennes(BaseUniversity):
             folder=RENNES_DIR
         )
 
-    def verify_erasmus_credential(self, credential: dict) -> bool:
+    def verify_erasmus_credential(self, credential: dict, student) -> bool:
         """
         Verifica una credenziale Erasmus emessa da un'altra università (es. Salerno).
-        Controlla la firma della credenziale, il suo stato di revoca e la validità temporale.
+        Controlla la firma della credenziale, il suo stato di revoca, la validità temporale
+        e che il DID dello studente corrisponda a quello nella credenziale.
         :param credential: La credenziale Erasmus da verificare.
+        :param student: Oggetto studente con attributo 'did' da confrontare.
         :return: True se la credenziale è valida e non revocata, False altrimenti.
         """
         issuer_did = credential.get("issuer")
@@ -43,6 +45,14 @@ class UniversityRennes(BaseUniversity):
         jws = proof.get("jws")
         verification_method = proof.get("verificationMethod")
         status = credential.get("credentialStatus", {})
+
+        # Controllo che il DID dello studente corrisponda a quello nella credenziale
+        credential_subject = credential.get("credentialSubject", {})
+        credential_student_did = credential_subject.get("id")
+        if credential_student_did != student.did:
+            print(
+                f"❌ DID dello studente non corrisponde: credenziale {credential_student_did} vs studente {student.did}")
+            return False
 
         # 1. Verifica che il DID dell'emittente sia trusted
         if issuer_did not in self.get_trusted_dids():
@@ -80,7 +90,7 @@ class UniversityRennes(BaseUniversity):
             )
             print("✅ Firma della credenziale Erasmus valida.")
 
-            # --- Inizio del controllo di validità temporale (aggiunto) ---
+            # --- Inizio del controllo di validità temporale ---
             expiration_str = credential.get("expirationDate")
             if expiration_str:
                 try:
@@ -154,9 +164,9 @@ class UniversityRennes(BaseUniversity):
 
         issuance_date = datetime.now(timezone.utc).isoformat() + "Z"
         expiration_date = (datetime.now(timezone.utc) + timedelta(days=730)).isoformat() + "Z"
-        credential_id = f"urn:uuid:{student.username}-academic-cred"
+        credential_id = student.user_id
         revocation_namespace = "rennes"
-        category_id = "anno2025"
+        category_id = "Academic2025"
         revocation_list_id = self.revocation_registry.generate_list_id(revocation_namespace, category_id)
         revocation_key = self.revocation_registry.generate_revocation_key(credential_id)
         # Genera foglie Merkle a livello di campo per ogni esame
@@ -212,7 +222,7 @@ class UniversityRennes(BaseUniversity):
             },
             "evidence": {
                 "type": "BlockchainRecord",
-                "description": "Merkle Root firmata e registrata su blockchain",
+                "description": "Merkle Root registrata su blockchain",
                 "transactionHash": tx_hash,
                 "network": "ConsorzioReteUniversitaria"
             },
@@ -230,7 +240,7 @@ class UniversityRennes(BaseUniversity):
             list_id=revocation_list_id,
             revocation_key=revocation_key
         )
-        
+
         filepath = os.path.join(student.get_wallet_path(), "credentials", f"{student.username}_academic_credential.json")
         with open(filepath, "w") as f:
             json.dump(credential, f, indent=2)

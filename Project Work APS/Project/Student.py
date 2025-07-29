@@ -164,17 +164,10 @@ class Student:
             print(f"❌ Errore di parsing della credenziale Accademica per {self.username}.")
             return None
 
-    def generate_selective_presentation_automated(self, reveal_fields: dict = None):
+    def generate_selective_presentation_automated(self):
         """
-        Genera una presentazione selettiva in modo automatizzato.
-        Permette di specificare quali campi rivelare da ciascun esame.
-        Se reveal_fields non è specificato, rivela un set predefinito (es. tutti i voti e crediti).
-
-        :param reveal_fields: Un dizionario che specifica quali campi rivelare per ogni esame.
-                              Formato: { "examId": {"field1": True, "field2": False}, ... }
-                              Se un campo non è presente o è False, il suo valore non verrà rivelato,
-                              ma la Merkle proof del suo hash verrà inclusa.
-        :return: La Verifiable Presentation generata come dizionario, o None se fallisce.
+        Genera una presentazione selettiva automatica.
+        Rivela sempre i campi name, grade e credits di tutti gli esami.
         """
         academic_cred = self.load_academic_credential()
         if not academic_cred:
@@ -187,7 +180,6 @@ class Student:
         leaves = []
         leaf_lookup = {}  # Mappa hash della foglia all'oggetto foglia {hash: {examId, field, value}}
         for exam in original_exams:
-            # Assicurati che ogni esame abbia un ID.
             exam_id = exam.get("examId", str(uuid.uuid4()))
             if "examId" not in exam:
                 exam["examId"] = exam_id
@@ -200,7 +192,7 @@ class Student:
                     leaf_lookup[h] = leaf_obj
 
         # 2. Calcolo tutte le Merkle Proof per tutte le foglie
-        full_proofs = {}  # { examId: { field: { "proof": [...], "value": "..." (solo se visibile) } } }
+        full_proofs = {}
         for h, leaf in leaf_lookup.items():
             exam_id = leaf["examId"]
             field = leaf["field"]
@@ -211,56 +203,42 @@ class Student:
 
             full_proofs[exam_id][field] = {
                 "proof": proof,
-                "value": leaf["value"]
+                "value": leaf["value"]  # di default includo il valore
             }
 
-        # 3. Determina quali campi rivelare in base a 'reveal_fields' o a un set predefinito
+        # 3. Costruisco la selezione dei campi da rivelare: sempre name, grade e credits
         selected_claims = {}
-        if reveal_fields is None:
-            # Set di rivelazione predefinito: rivela nome, voto e crediti di tutti gli esami.
-            for exam in original_exams:
-                exam_id = exam["examId"] # Ora sappiamo che ha un ID
-                selected_claims[exam_id] = {"name": exam.get("name")} # Nome sempre incluso se esame incluso
-                if "grade" in exam:
-                    selected_claims[exam_id]["grade"] = exam["grade"]
-                if "credits" in exam:
-                    selected_claims[exam_id]["credits"] = exam["credits"]
-                # Non rivelare 'date' per impostazione predefinita
-        else:
-            # Usa la configurazione di rivelazione fornita
-            for exam in original_exams:
-                exam_id = exam["examId"]
-                if exam_id in reveal_fields:
-                    selected_claims[exam_id] = {}
-                    for field, should_reveal in reveal_fields[exam_id].items():
-                        if should_reveal and field in exam:
-                            selected_claims[exam_id][field] = exam[field]
-                        elif not should_reveal and field in exam:
-                            # Se non deve essere rivelato, rimuovi il valore e metti l'hash della foglia
-                            leaf_obj = {"examId": exam_id, "field": field, "value": exam[field]}
-                            leaf_hash = hash_leaf(leaf_obj)
-                            if exam_id in full_proofs and field in full_proofs[exam_id]:
-                                full_proofs[exam_id][field].pop("value", None) # Rimuovi il valore rivelato
-                                full_proofs[exam_id][field]["leafHash"] = leaf_hash # Includi solo l'hash della foglia
-                    if "name" in exam and "name" not in selected_claims[exam_id]:
-                        selected_claims[exam_id]["name"] = exam["name"]
+        for exam in original_exams:
+            exam_id = exam["examId"]
+            selected_claims[exam_id] = {}
+            for field in ["name", "grade", "credits"]:
+                if field in exam:
+                    selected_claims[exam_id][field] = exam[field]
 
+            # Per i campi non rivelati (es: date), rimuovo il valore dalla proof lasciando solo la proof + hash
+            for field in full_proofs.get(exam_id, {}):
+                if field not in selected_claims[exam_id]:
+                    # rimuovo valore e aggiungo solo hash foglia
+                    full_proofs[exam_id][field].pop("value", None)
+                    leaf_obj = {"examId": exam_id, "field": field, "value": exam[field]}
+                    leaf_hash = hash_leaf(leaf_obj)
+                    full_proofs[exam_id][field]["leafHash"] = leaf_hash
 
         if not selected_claims:
             print("⚠️ Nessun esame selezionato per la presentazione. Presentazione non generata.")
             return None
 
-        # 4. Costruisci il credentialSubject per la presentazione
+        # 4. Costruisco il credentialSubject per la presentazione
         presentation_credential_subject = {
             "id": academic_cred["credentialSubject"]["id"],
             "givenName": academic_cred["credentialSubject"]["givenName"],
             "familyName": academic_cred["credentialSubject"]["familyName"],
             "homeUniversity": academic_cred["credentialSubject"]["homeUniversity"],
-            "disclosedClaims": selected_claims, # I claims che lo studente ha scelto di rivelare
-            "proofs": full_proofs # Tutte le Merkle proofs, con o senza valore a seconda della selezione
+            "disclosedClaims": selected_claims,
+            "proofs": full_proofs
         }
 
-        # 5. Crea la Verifiable Presentation senza il campo 'proof' (che verrà aggiunto dopo la firma)
+        # 5. Creo la Verifiable Presentation senza il campo 'proof' (che verrà aggiunto dopo la firma)
         vp_to_sign = {
             "@context": [
                 "https://www.w3.org/2018/credentials/v1",
@@ -297,7 +275,7 @@ class Student:
 
         print(f"\n✅ Verifiable Presentation salvata in: {output_path}")
         return vp
-    
+
     def get_wallet_path(self):
         """
         Restituisce il percorso della cartella wallet dello studente.

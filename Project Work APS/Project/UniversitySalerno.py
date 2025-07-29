@@ -46,9 +46,9 @@ class UniversitySalerno(BaseUniversity):
         issuance_date = datetime.now(timezone.utc).isoformat() + "Z"
         expiration_date = (datetime.now(timezone.utc) + timedelta(days=365)).isoformat() + "Z"
 
-        credential_id = f"urn:uuid:{student.username}-erasmus-cred"
+        credential_id = student.user_id
         revocation_namespace = "unisa"
-        category_id = "erasmus2025"
+        category_id = "Erasmus2025"
         revocation_list_id = self.revocation_registry.generate_list_id(revocation_namespace, category_id)
         revocation_key = self.revocation_registry.generate_revocation_key(credential_id)
 
@@ -122,23 +122,40 @@ class UniversitySalerno(BaseUniversity):
 
         print(f"✅ Credenziale Erasmus salvata in: {filepath}")
 
-    def verify_selective_presentation(self, presentation: dict) -> bool:
+    def verify_selective_presentation(self, presentation: dict, student) -> bool:
         """
-        Verifica una presentazione selettiva, inclusa la firma della presentazione,
-        lo stato di revoca della credenziale e le Merkle Proofs per i campi rivelati.
-        Nota: Questa implementazione assume che la presentazione contenga una VC
-        con un campo 'proofs' all'interno di 'credentialSubject' per i dati rivelati.
-        :param presentation: La presentazione verificabile da verificare.
-        :return: True se la presentazione è valida, False altrimenti.
+        Verifica una presentazione selettiva includendo:
+        - Firma della VP
+        - Consistenza dei DID tra student, VP e VC
+        - Scadenza, revoca, Merkle proofs e Merkle root.
         """
         try:
-            # 1. Verifica firma della Verifiable Presentation
-            student_did = presentation["holder"]
+            # 1. DID atteso dallo studente
+            expected_student_did = student.did
+            if not expected_student_did:
+                print("❌ DID dello studente mancante nell'oggetto student.")
+                return False
+
+            # 2. Estrazione DID dalla VP e dalla VC
+            vp_holder_did = presentation.get("holder")
+            vc = presentation.get("verifiableCredential")
+            vc_holder_did = vc.get("credentialSubject", {}).get("id")
+
+            # 3. Verifica coerenza tra tutti i DID
+            if vp_holder_did != expected_student_did:
+                print(f"❌ DID mismatch: VP holder {vp_holder_did} ≠ Student {expected_student_did}")
+                return False
+            if vc_holder_did and vc_holder_did != expected_student_did:
+                print(f"❌ DID mismatch: VC subject {vc_holder_did} ≠ Student {expected_student_did}")
+                return False
+            print("✅ DID coerenti tra student, VP e VC.")
+
+            # 4. Verifica firma della VP
             vp_proof = presentation["proof"]
             jws = vp_proof["jws"]
             verification_method = vp_proof["verificationMethod"]
 
-            did_doc = self.resolve_did_student(student_did)
+            did_doc = self.resolve_did_student(vp_holder_did)
             pub_key_pem = None
             for vm in did_doc.get("verificationMethod", []):
                 if vm["id"] == verification_method:
@@ -150,7 +167,6 @@ class UniversitySalerno(BaseUniversity):
                 return False
 
             public_key = serialization.load_pem_public_key(pub_key_pem.encode())
-
             unsigned_presentation = presentation.copy()
             unsigned_presentation.pop("proof", None)
             payload = json.dumps(unsigned_presentation, sort_keys=True).encode()
@@ -158,52 +174,34 @@ class UniversitySalerno(BaseUniversity):
             public_key.verify(
                 base64.b64decode(jws),
                 payload,
-                padding.PSS(
-                    mgf=padding.MGF1(hashes.SHA256()),
-                    salt_length=padding.PSS.MAX_LENGTH
-                ),
+                padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH),
                 hashes.SHA256()
             )
             print("✅ Firma della presentazione valida.")
 
-            # 2. Estrai la VC dalla presentazione
-            vc = presentation["verifiableCredential"]
-
+            # 5. Verifica scadenza credenziale
             expiration_str = vc.get("expirationDate")
             if expiration_str:
-                try:
-                    expiration_date = datetime.fromisoformat(expiration_str)
-                except ValueError:
-                    try:
-                        if expiration_str.endswith('Z'):
-                            expiration_date = datetime.fromisoformat(expiration_str[:-1])
-                        else:
-                            raise
-                    except ValueError:
-                        print(f"❌ Formato data di scadenza non valido: {expiration_str}. Processo interrotto.")
-                        return False
-
+                expiration_date = datetime.fromisoformat(expiration_str.rstrip("Z"))
                 now = datetime.now(tz=timezone.utc)
                 if expiration_date.tzinfo is None:
                     expiration_date = expiration_date.replace(tzinfo=timezone.utc)
-
                 if now > expiration_date:
-                    print("❌ La credenziale è scaduta. Processo interrotto.")
+                    print("❌ La credenziale è scaduta.")
                     return False
-                else:
-                    print("✅ La credenziale è ancora valida temporalmente.")
+                print("✅ Credenziale valida temporalmente.")
             else:
-                print("Nessuna data di scadenza specificata per questa credenziale nella presentazione.")
+                print("ℹ️ Nessuna data di scadenza specificata.")
 
-            # 3. Recupera la Merkle Root dalla blockchain
+            # 6. Verifica Merkle Root on-chain
             tx_hash = vc["evidence"]["transactionHash"]
             on_chain_root = self.blockchain.get_merkle_root(tx_hash)
             if not on_chain_root:
-                print("❌ Merkle Root non trovata sulla blockchain.")
+                print("❌ Merkle Root non trovata on-chain.")
                 return False
-            print(f"✅ Merkle Root recuperata: {on_chain_root}")
+            print(f"✅ Merkle Root on-chain: {on_chain_root}")
 
-            # 4. Verifica lo stato di revoca
+            # 7. Verifica stato di revoca
             status = vc["credentialStatus"]
             is_revoked = self.revocation_registry.is_revoked(
                 namespace=status["namespace"],
@@ -213,36 +211,28 @@ class UniversitySalerno(BaseUniversity):
             if is_revoked:
                 print("❌ La credenziale è stata revocata.")
                 return False
-            print("✅ Credenziale NON revocata.")
+            print("✅ Credenziale non revocata.")
 
-            # 5. Verifica delle Merkle Proof fornite per ogni campo rivelato
+            # 8. Verifica Merkle Proofs dei campi rivelati
             revealed = vc["credentialSubject"]["proofs"]
             for exam_id, fields in revealed.items():
                 for field, data in fields.items():
-                    if "value" in data:
-                        leaf_obj = {"examId": exam_id, "field": field, "value": data["value"]}
-                        leaf_hash = hash_leaf(leaf_obj)
-                    elif "leafHash" in data:
-                        leaf_hash = data["leafHash"]
-                    else:
-                        print(f"❌ Mancano 'value' e 'leafHash' per {exam_id}.{field}")
-                        return False
-
-                    proof = data["proof"]
-                    if not verify_merkle_proof(leaf_hash, proof, on_chain_root):
+                    leaf_hash = (
+                        hash_leaf({"examId": exam_id, "field": field, "value": data["value"]})
+                        if "value" in data else data.get("leafHash")
+                    )
+                    if not leaf_hash or not verify_merkle_proof(leaf_hash, data["proof"], on_chain_root):
                         print(f"❌ Merkle proof non valida per {exam_id}.{field}")
                         return False
+            print("✅ Merkle proofs verificate.")
 
-            print("✅ Tutte le Merkle proof sono valide.")
-
-            # 6. Ricostruzione della Merkle Root completa e confronto con on-chain
+            # 9. Verifica ricostruzione Merkle Root
             reconstructed = reconstruct_merkle_root(revealed)
             if reconstructed != on_chain_root:
-                print("❌ La Merkle Root ricostruita non coincide con quella on-chain.")
+                print("❌ Root ricostruita ≠ root on-chain.")
                 return False
-            print("✅ Merkle Root ricostruita corrisponde alla root on-chain.")
+            print("✅ Merkle Root ricostruita correttamente.")
 
-            # 7. Tutto ok
             print("🎓 Verifica completata. Presentazione valida.")
             return True
 
