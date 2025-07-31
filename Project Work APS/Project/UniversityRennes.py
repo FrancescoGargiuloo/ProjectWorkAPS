@@ -3,12 +3,11 @@ from datetime import datetime, timezone, timedelta
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.exceptions import InvalidSignature
-
 from BaseUniversity import BaseUniversity
 from DatabaseManager import UserManager
 from Blockchain import Blockchain
 from RevocationRegistry import RevocationRegistry
-from MerkleTree import hash_leaf, merkle_root
+from MerkleTree import merkle_root, hash_leaf_with_salt, generate_deterministic_salt
 
 BASE_DIR = os.path.dirname(__file__)
 RENNES_DIR = os.path.join(BASE_DIR, "rennes")
@@ -148,105 +147,6 @@ class UniversityRennes(BaseUniversity):
         """
         return ["did:web:unisa.it"]
 
-
-    def generate_academic_credential(self, student, exams: list):
-        """
-        Genera una credenziale accademica per uno studente, basata sui suoi esami.
-        La credenziale include una Merkle Root degli esami firmata e registrata sulla blockchain.
-        :param student: L'oggetto studente per cui generare la credenziale.
-        :param exams: Una lista di dizionari, ognuno rappresentante un esame.
-        """
-        filepath = os.path.join(student.get_wallet_path(), "credentials", f"{student.username}_academic_credential.json")
-
-        if os.path.exists(filepath):
-            print(f"⚠️ Credenziale Erasmus per lo studente {student.username} esiste già. Saltando la generazione.")
-            return None
-
-        issuance_date = datetime.now(timezone.utc).isoformat() + "Z"
-        expiration_date = (datetime.now(timezone.utc) + timedelta(days=730)).isoformat() + "Z"
-        credential_id = student.user_id
-        revocation_namespace = "rennes"
-        category_id = "Academic2025"
-        revocation_list_id = self.revocation_registry.generate_list_id(revocation_namespace, category_id)
-        revocation_key = self.revocation_registry.generate_revocation_key(credential_id)
-        # Genera foglie Merkle a livello di campo per ogni esame
-        leaves = []
-        for exam in exams:
-            for field in ["name", "grade", "credits", "date"]:
-                if field in exam:
-                    leaf_obj = {"examId": exam["examId"], "field": field, "value": exam[field]}
-                    h = hash_leaf(leaf_obj)
-                    leaves.append(h)
-
-        # Calcola la Merkle Root da tutte le foglie degli esami
-        root = merkle_root(leaves)
-
-        # Firma la Merkle Root con la chiave privata di Rennes
-        priv_key = serialization.load_pem_private_key(open(self.priv_path, "rb").read(), password=None)
-        jws_signature = base64.b64encode(priv_key.sign(
-            root.encode(),
-            padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH),
-            hashes.SHA256()
-        )).decode()
-        # Registra la Merkle Root sulla blockchain
-        tx_hash = self.blockchain.add_block({
-                    "merkleRoot": root,
-                    "type": "AcademicCredential",
-                    "studentDID": student.did,
-                    "issuer": self.did
-                })
-        # Costruisci la credenziale accademica
-        credential = {
-            "@context": [
-                "https://www.w3.org/2018/credentials/v1",
-                "https://consorzio-universita.example/credentials/v1"
-            ],
-            "type": ["VerifiableCredential", "AcademicCredential"],
-            "issuer": self.did,
-            "issuanceDate": issuance_date,
-            "expirationDate": expiration_date,
-            "credentialSubject": {
-                "id": student.did,
-                "givenName": student.first_name or "N/A",
-                "familyName": student.last_name or "N/A",
-                "homeUniversity": "Universita' di Salerno",
-                "exams": exams
-            },
-            "credentialStatus": {
-                "id": f"https://consorzio-univ.it/creds/{student.username}-academic-status",
-                "type": "ConsortiumRevocationRegistry2024",
-                "registry": "0xRegistryAddresRennes",
-                "namespace": revocation_namespace,
-                "revocationList": revocation_list_id,
-                "revocationKey": revocation_key
-            },
-            "evidence": {
-                "type": "BlockchainRecord",
-                "description": "Merkle Root registrata su blockchain",
-                "transactionHash": tx_hash,
-                "network": "ConsorzioReteUniversitaria"
-            },
-            "proof": {
-                "type": "RsaSignature2023",
-                "created": issuance_date,
-                "proofPurpose": "assertionMethod",
-                "verificationMethod": f"{self.did}#key-1",
-                "jws": jws_signature
-            }
-        }
-
-        self.revocation_registry.create_revocation_entry(
-            namespace=revocation_namespace,
-            list_id=revocation_list_id,
-            revocation_key=revocation_key
-        )
-
-        filepath = os.path.join(student.get_wallet_path(), "credentials", f"{student.username}_academic_credential.json")
-        with open(filepath, "w") as f:
-            json.dump(credential, f, indent=2)
-
-        print(f"🎓 Academic Credential emessa e salvata: {filepath}")
-
     def collect_exam_data(self, file_path=EXAM):
         """
         Carica i dati degli esami da un file JSON.
@@ -275,3 +175,115 @@ class UniversityRennes(BaseUniversity):
             print(
                 f"❌ Si è verificato un errore inaspettato durante la lettura del file {file_path}: {e}. Restituisco lista vuota.")
             return []
+
+    def generate_academic_credential(self, student, exams: list):
+        """
+        Genera una credenziale accademica per uno studente.
+        """
+        filepath = os.path.join(student.get_wallet_path(), "credentials",
+                                f"{student.username}_academic_credential.json")
+
+        if os.path.exists(filepath):
+            print(f"⚠️ Credenziale Erasmus per lo studente {student.username} esiste già. Saltando la generazione.")
+            return None
+
+        issuance_date = datetime.now(timezone.utc).isoformat() + "Z"
+        expiration_date = (datetime.now(timezone.utc) + timedelta(days=730)).isoformat() + "Z"
+        credential_id = student.user_id
+        revocation_namespace = "rennes"
+        category_id = "Academic2025"
+        revocation_list_id = self.revocation_registry.generate_list_id(revocation_namespace, category_id)
+        revocation_key = self.revocation_registry.generate_revocation_key(credential_id)
+
+        credential_status = {
+            "id": f"https://consorzio-univ.it/creds/{student.username}-academic-status",
+            "type": "ConsortiumRevocationRegistry2024",
+            "registry": "0xRegistryAddresRennes",
+            "namespace": revocation_namespace,
+            "revocationList": revocation_list_id,
+            "revocationKey": revocation_key
+        }
+
+        # Esami dict
+        exams_dict = {}
+        for exam in exams:
+            exam_id = exam.get("examId")
+            if "examId" not in exam:
+                exam["examId"] = exam_id
+            exams_dict[exam_id] = {k: v for k, v in exam.items() if k != "examId"}
+
+        leaves = []
+
+        # Esami ordinati
+        for exam_id, exam_data in sorted(exams_dict.items()):
+            for field, value in sorted(exam_data.items()):
+                salt = generate_deterministic_salt(exam_id, field, value, student)
+                leaf_hash = hash_leaf_with_salt(exam_id, field, value, salt)
+                leaves.append(leaf_hash)
+
+        # CredentialStatus ordinato
+        for field, value in sorted(credential_status.items()):
+            salt = generate_deterministic_salt("credentialStatus", field, value, student)
+            leaf_hash = hash_leaf_with_salt("credentialStatus", field, value, salt)
+            leaves.append(leaf_hash)
+
+        root = merkle_root(leaves)
+
+        priv_key = serialization.load_pem_private_key(open(self.priv_path, "rb").read(), password=None)
+        jws_signature = base64.b64encode(priv_key.sign(
+            root.encode(),
+            padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH),
+            hashes.SHA256()
+        )).decode()
+
+        tx_hash = self.blockchain.add_block({
+            "merkleRoot": root,
+            "type": "AcademicCredential",
+            "studentDID": student.did,
+            "issuer": self.did
+        })
+
+        credential = {
+            "@context": [
+                "https://www.w3.org/2018/credentials/v1",
+                "https://consorzio-universita.example/credentials/v1"
+            ],
+            "type": ["VerifiableCredential", "AcademicCredential"],
+            "issuer": self.did,
+            "issuanceDate": issuance_date,
+            "expirationDate": expiration_date,
+            "credentialSubject": {
+                "id": student.did,
+                "givenName": student.first_name or "N/A",
+                "familyName": student.last_name or "N/A",
+                "homeUniversity": "Universita' di Salerno",
+                "exams": exams_dict,
+                "credentialStatus": credential_status
+            },
+            "credentialStatus": credential_status,
+            "evidence": {
+                "type": "BlockchainRecord",
+                "description": "Merkle Root registrata su blockchain",
+                "transactionHash": tx_hash,
+                "network": "ConsorzioReteUniversitaria"
+            },
+            "proof": {
+                "type": "RsaSignature2023",
+                "created": issuance_date,
+                "proofPurpose": "assertionMethod",
+                "verificationMethod": f"{self.did}#key-1",
+                "jws": jws_signature
+            }
+        }
+
+        self.revocation_registry.create_revocation_entry(
+            namespace=revocation_namespace,
+            list_id=revocation_list_id,
+            revocation_key=revocation_key
+        )
+
+        with open(filepath, "w") as f:
+            json.dump(credential, f, indent=2)
+
+        print(f"🎓 Academic Credential emessa e salvata: {filepath}")
+        return credential

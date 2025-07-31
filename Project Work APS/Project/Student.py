@@ -2,8 +2,8 @@ import os, json, base64
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from datetime import datetime, timezone
-from MerkleTree import hash_leaf, build_merkle_proof
-import uuid
+from MerkleTree import build_merkle_proof, hash_leaf_with_salt, generate_deterministic_salt
+import hashlib
 
 BASE_DIR = os.path.dirname(__file__)
 DID_FOLDER = os.path.join(BASE_DIR, "DID")
@@ -164,81 +164,98 @@ class Student:
             print(f"❌ Errore di parsing della credenziale Accademica per {self.username}.")
             return None
 
-    def generate_selective_presentation_automated(self):
+
+    def get_wallet_path(self):
         """
-        Genera una presentazione selettiva automatica.
-        Rivela sempre i campi name, grade e credits di tutti gli esami.
+        Restituisce il percorso della cartella wallet dello studente.
         """
+        return self.wallet_dir
+
+    def generate_selective_presentation_automated(self, revealed_fields=None):
+        if revealed_fields is None:
+            revealed_fields = {}
+
         academic_cred = self.load_academic_credential()
         if not academic_cred:
-            print("Impossibile generare la presentazione selettiva: Credenziale Accademica non trovata.")
+            print("Impossibile generare la presentazione selettiva: Credenziale non trovata.")
             return None
+        exam_ids_to_include = list(academic_cred["credentialSubject"]["exams"].keys())
 
-        original_exams = academic_cred["credentialSubject"]["exams"]
+        disclosed_claims = {
+            "exams": {},
+            "credentialStatus": academic_cred["credentialSubject"]["credentialStatus"]
+        }
 
-        # 1. Calcolo tutte le foglie Merkle per tutti i campi di tutti gli esami
-        leaves = []
-        leaf_lookup = {}  # Mappa hash della foglia all'oggetto foglia {hash: {examId, field, value}}
-        for exam in original_exams:
-            exam_id = exam.get("examId", str(uuid.uuid4()))
-            if "examId" not in exam:
-                exam["examId"] = exam_id
+        for exam_id in exam_ids_to_include:
+            exam_data = academic_cred["credentialSubject"]["exams"][exam_id]
+            fields_to_reveal = revealed_fields.get(exam_id, ["grade"])
+            disclosed_claims["exams"][exam_id] = {}
 
-            for field in ["name", "grade", "credits", "date"]:
-                if field in exam:
-                    leaf_obj = {"examId": exam_id, "field": field, "value": exam[field]}
-                    h = hash_leaf(leaf_obj)
-                    leaves.append(h)
-                    leaf_lookup[h] = leaf_obj
+            for field in fields_to_reveal:
+                if field in exam_data:
+                    disclosed_claims["exams"][exam_id][field] = exam_data[field]
+                else:
+                    print(f"Field {field} not found in exam_data keys: {list(exam_data.keys())}")
 
-        # 2. Calcolo tutte le Merkle Proof per tutte le foglie
-        full_proofs = {}
-        for h, leaf in leaf_lookup.items():
-            exam_id = leaf["examId"]
-            field = leaf["field"]
-            proof = build_merkle_proof(h, leaves)
+        proofs = {"exams": {}, "credentialStatus": {}}
 
-            if exam_id not in full_proofs:
-                full_proofs[exam_id] = {}
+        all_leaves = []
+        leaf_mapping = {}
 
-            full_proofs[exam_id][field] = {
-                "proof": proof,
-                "value": leaf["value"]  # di default includo il valore
-            }
+        # Esami ordinati
+        for exam_id, exam_data in sorted(academic_cred["credentialSubject"]["exams"].items()):
+            for field, value in sorted(exam_data.items()):
+                salt = generate_deterministic_salt(exam_id, field, value, self)
+                leaf_hash = hash_leaf_with_salt(exam_id, field, value, salt)
+                all_leaves.append(leaf_hash)
+                leaf_mapping[leaf_hash] = (exam_id, field, value, salt)
 
-        # 3. Costruisco la selezione dei campi da rivelare: sempre name, grade e credits
-        selected_claims = {}
-        for exam in original_exams:
-            exam_id = exam["examId"]
-            selected_claims[exam_id] = {}
-            for field in ["name", "grade", "credits"]:
-                if field in exam:
-                    selected_claims[exam_id][field] = exam[field]
+        # CredentialStatus ordinato
+        for field, value in sorted(academic_cred["credentialSubject"]["credentialStatus"].items()):
+            salt = generate_deterministic_salt("credentialStatus", field, value, self)
+            leaf_hash = hash_leaf_with_salt("credentialStatus", field, value, salt)
+            all_leaves.append(leaf_hash)
+            leaf_mapping[leaf_hash] = ("credentialStatus", field, value, salt)
 
-            # Per i campi non rivelati (es: date), rimuovo il valore dalla proof lasciando solo la proof + hash
-            for field in full_proofs.get(exam_id, {}):
-                if field not in selected_claims[exam_id]:
-                    # rimuovo valore e aggiungo solo hash foglia
-                    full_proofs[exam_id][field].pop("value", None)
-                    leaf_obj = {"examId": exam_id, "field": field, "value": exam[field]}
-                    leaf_hash = hash_leaf(leaf_obj)
-                    full_proofs[exam_id][field]["leafHash"] = leaf_hash
+        # Proofs esami
+        for exam_id in exam_ids_to_include:
+            if exam_id not in academic_cred["credentialSubject"]["exams"]:
+                continue
 
-        if not selected_claims:
-            print("⚠️ Nessun esame selezionato per la presentazione. Presentazione non generata.")
-            return None
+            proofs["exams"][exam_id] = {}
+            exam_data = academic_cred["credentialSubject"]["exams"][exam_id]
+            fields_to_reveal = revealed_fields.get(exam_id, ["grade"])
 
-        # 4. Costruisco il credentialSubject per la presentazione
+            for field, value in sorted(exam_data.items()):
+                salt = generate_deterministic_salt(exam_id, field, value, self)
+                target_leaf_hash = hash_leaf_with_salt(exam_id, field, value, salt)
+                proof = build_merkle_proof(target_leaf_hash, all_leaves)
+
+                if field in fields_to_reveal:
+                    proofs["exams"][exam_id][field] = {"proof": proof}
+                else:
+                    proofs["exams"][exam_id][field] = {
+                        "proof": proof,
+                        "leafHash": target_leaf_hash
+                    }
+
+        # Proofs credentialStatus
+        for field, value in sorted(academic_cred["credentialSubject"]["credentialStatus"].items()):
+            salt = generate_deterministic_salt("credentialStatus", field, value, self)
+            target_leaf_hash = hash_leaf_with_salt("credentialStatus", field, value, salt)
+            proof = build_merkle_proof(target_leaf_hash, all_leaves)
+            proofs["credentialStatus"][field] = {"proof": proof}
+
+        # VP finale
         presentation_credential_subject = {
             "id": academic_cred["credentialSubject"]["id"],
             "givenName": academic_cred["credentialSubject"]["givenName"],
             "familyName": academic_cred["credentialSubject"]["familyName"],
             "homeUniversity": academic_cred["credentialSubject"]["homeUniversity"],
-            "disclosedClaims": selected_claims,
-            "proofs": full_proofs
+            "disclosedClaims": disclosed_claims,
+            "proofs": proofs,
         }
 
-        # 5. Creo la Verifiable Presentation senza il campo 'proof' (che verrà aggiunto dopo la firma)
         vp_to_sign = {
             "@context": [
                 "https://www.w3.org/2018/credentials/v1",
@@ -247,19 +264,22 @@ class Student:
             "type": ["VerifiablePresentation"],
             "holder": self.did,
             "verifiableCredential": {
-                **academic_cred,
-                "credentialSubject": presentation_credential_subject
+                "@context": academic_cred["@context"],
+                "type": academic_cred["type"],
+                "issuer": academic_cred["issuer"],
+                "issuanceDate": academic_cred["issuanceDate"],
+                "expirationDate": academic_cred["expirationDate"],
+                "credentialSubject": presentation_credential_subject,
+                "credentialStatus": academic_cred["credentialStatus"],
+                "evidence": academic_cred["evidence"],
+                "proof": academic_cred["proof"]
             }
         }
 
         nonce = base64.b64encode(os.urandom(16)).decode()
-        created = datetime.now(timezone.utc).isoformat() + "Z"
+        created = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+        signature = self.sign(json.dumps(vp_to_sign, sort_keys=True))
 
-        # 6. Firma tutta la presentazione
-        to_sign = json.dumps(vp_to_sign, sort_keys=True)
-        signature = self.sign(to_sign)
-
-        # 7. Aggiungi la prova con la firma alla Verifiable Presentation
         vp = vp_to_sign.copy()
         vp["proof"] = {
             "type": "RsaSignature2023",
@@ -275,10 +295,3 @@ class Student:
 
         print(f"\n✅ Verifiable Presentation salvata in: {output_path}")
         return vp
-
-    def get_wallet_path(self):
-        """
-        Restituisce il percorso della cartella wallet dello studente.
-        """
-        return self.wallet_dir
-    
