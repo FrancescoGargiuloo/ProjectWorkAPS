@@ -239,7 +239,6 @@ class UniversityRennes(BaseUniversity):
         tx_hash = self.blockchain.add_block({
             "merkleRoot": root,
             "type": "AcademicCredential",
-            "studentDID": student.did,
             "issuer": self.did
         })
 
