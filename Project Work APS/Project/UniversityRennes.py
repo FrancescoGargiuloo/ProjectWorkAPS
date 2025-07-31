@@ -274,7 +274,6 @@ class UniversityRennes(BaseUniversity):
                 "jws": jws_signature
             }
         }
-
         self.revocation_registry.create_revocation_entry(
             namespace=revocation_namespace,
             list_id=revocation_list_id,

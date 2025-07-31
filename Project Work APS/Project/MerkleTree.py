@@ -19,9 +19,7 @@ def hash_leaf_with_salt(exam_id: str, field: str, value: Any, salt: str) -> str:
     }
     json_string = json.dumps(leaf_data, sort_keys=True)
     leaf_hash = hashlib.sha256(json_string.encode()).hexdigest()
-    # print(f"[DEBUG] Foglia calcolata per {exam_id}.{field} "
     return leaf_hash
-
 
 def build_merkle_proof(target_hash: str, leaves: List[str]) -> List[List[str]]:
     """
@@ -64,16 +62,13 @@ def build_merkle_proof(target_hash: str, leaves: List[str]) -> List[List[str]]:
         target_index = target_index // 2
         current_level_hashes = next_level_hashes
 
-    #print(f"[DEBUG] Proof generata: {proof}")
     return proof
-
 
 def merkle_root(leaves: List[str]) -> Optional[str]:
     """
     Calcola la radice del Merkle Tree (con debug)
     """
     if not leaves:
-        #print("[DEBUG] Nessuna foglia, root=None")
         return None
 
     current_level = leaves[:]
@@ -91,37 +86,20 @@ def merkle_root(leaves: List[str]) -> Optional[str]:
 
     return current_level[0]
 
-
 def verify_merkle_proof(leaf_hash: str, proof: List[List[str]], root: str) -> bool:
     """
-    Verifica una Merkle proof con debug dettagliato
+    Verifica una Merkle proof.
     """
     computed_hash = leaf_hash
 
-    for step, (direction, sibling_hash) in enumerate(proof):
-        # La concatenazione deve sempre essere left + right,
-        # indipendentemente da dove si trovi il 'computed_hash' o il 'sibling_hash'.
-        # Se 'direction' è 'right', significa che il sibling è a destra del 'computed_hash'
-        # quindi computed_hash è il sinistro.
-        # Se 'direction' è 'left', significa che il sibling è a sinistra del 'computed_hash'
-        # quindi computed_hash è il destro.
-        if direction == 'left':  # Sibling è a sinistra, computed_hash è a destra
+    for direction, sibling_hash in proof:
+        if direction == 'left':      # Sibling è a sinistra
             combined = sibling_hash + computed_hash
-        elif direction == 'right':  # Sibling è a destra, computed_hash è a sinistra
+        elif direction == 'right':   # Sibling è a destra
             combined = computed_hash + sibling_hash
-            #print(
-               #f"[DEBUG] Step {step}: computed + RIGHT (sibling) → {computed_hash[:6]}... + {sibling_hash[:6]}... = {combined[:8]}...")
         else:
-            #print(f"[DEBUG] Step {step}: Direzione sconosciuta '{direction}'")
             return False
 
         computed_hash = hashlib.sha256(combined.encode()).hexdigest()
-        #print(f"[DEBUG] Step {step}: Hash calcolato: {computed_hash}")
 
-    #print(f"[DEBUG] Merkle Root attesa: {root}")
-    #print(f"[DEBUG] Hash calcolato dalla proof: {computed_hash}")
-
-    is_valid = computed_hash == root
-    #print(f"[DEBUG] Verifica finale: {'✅ CORRETTA' if is_valid else '❌ MISMATCH'}")
-
-    return is_valid
+    return computed_hash == root

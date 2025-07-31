@@ -3,7 +3,6 @@ from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from datetime import datetime, timezone
 from MerkleTree import build_merkle_proof, hash_leaf_with_salt, generate_deterministic_salt
-import hashlib
 
 BASE_DIR = os.path.dirname(__file__)
 DID_FOLDER = os.path.join(BASE_DIR, "DID")
@@ -171,7 +170,7 @@ class Student:
         """
         return self.wallet_dir
 
-    def generate_selective_presentation_automated(self, revealed_fields=None):
+    def generate_selective_presentation_automated(self, revealed_fields=None, nonce_received = None):
         if revealed_fields is None:
             revealed_fields = {}
 
@@ -179,74 +178,61 @@ class Student:
         if not academic_cred:
             print("Impossibile generare la presentazione selettiva: Credenziale non trovata.")
             return None
-        exam_ids_to_include = list(academic_cred["credentialSubject"]["exams"].keys())
+
+        exam_ids = list(academic_cred["credentialSubject"]["exams"].keys())
 
         disclosed_claims = {
             "exams": {},
             "credentialStatus": academic_cred["credentialSubject"]["credentialStatus"]
         }
 
-        for exam_id in exam_ids_to_include:
+        proofs = {"exams": {}, "credentialStatus": {}}
+        all_leaves = []
+        leaf_info = {}
+
+        # ✅ 1. Costruisci tutte le foglie dell'albero (per proof corrette)
+        for exam_id, exam_data in sorted(academic_cred["credentialSubject"]["exams"].items()):
+            for field, value in sorted(exam_data.items()):
+                salt = generate_deterministic_salt(exam_id, field, value, self)
+                leaf_hash = hash_leaf_with_salt(exam_id, field, value, salt)
+                all_leaves.append(leaf_hash)
+                leaf_info[(exam_id, field)] = (value, salt)
+
+        for field, value in sorted(academic_cred["credentialSubject"]["credentialStatus"].items()):
+            salt = generate_deterministic_salt("credentialStatus", field, value, self)
+            leaf_hash = hash_leaf_with_salt("credentialStatus", field, value, salt)
+            all_leaves.append(leaf_hash)
+            leaf_info[("credentialStatus", field)] = (value, salt)
+
+        # ✅ 2. Rivela solo i campi richiesti
+        for exam_id in exam_ids:
             exam_data = academic_cred["credentialSubject"]["exams"][exam_id]
             fields_to_reveal = revealed_fields.get(exam_id, ["grade"])
             disclosed_claims["exams"][exam_id] = {}
 
             for field in fields_to_reveal:
                 if field in exam_data:
-                    disclosed_claims["exams"][exam_id][field] = exam_data[field]
-                else:
-                    print(f"Field {field} not found in exam_data keys: {list(exam_data.keys())}")
+                    value = exam_data[field]
+                    disclosed_claims["exams"][exam_id][field] = value
 
-        proofs = {"exams": {}, "credentialStatus": {}}
+                    # Merkle proof
+                    salt = leaf_info[(exam_id, field)][1]
+                    leaf_hash = hash_leaf_with_salt(exam_id, field, value, salt)
+                    proof = build_merkle_proof(leaf_hash, all_leaves)
 
-        all_leaves = []
-        leaf_mapping = {}
-
-        # Esami ordinati
-        for exam_id, exam_data in sorted(academic_cred["credentialSubject"]["exams"].items()):
-            for field, value in sorted(exam_data.items()):
-                salt = generate_deterministic_salt(exam_id, field, value, self)
-                leaf_hash = hash_leaf_with_salt(exam_id, field, value, salt)
-                all_leaves.append(leaf_hash)
-                leaf_mapping[leaf_hash] = (exam_id, field, value, salt)
-
-        # CredentialStatus ordinato
-        for field, value in sorted(academic_cred["credentialSubject"]["credentialStatus"].items()):
-            salt = generate_deterministic_salt("credentialStatus", field, value, self)
-            leaf_hash = hash_leaf_with_salt("credentialStatus", field, value, salt)
-            all_leaves.append(leaf_hash)
-            leaf_mapping[leaf_hash] = ("credentialStatus", field, value, salt)
-
-        # Proofs esami
-        for exam_id in exam_ids_to_include:
-            if exam_id not in academic_cred["credentialSubject"]["exams"]:
-                continue
-
-            proofs["exams"][exam_id] = {}
-            exam_data = academic_cred["credentialSubject"]["exams"][exam_id]
-            fields_to_reveal = revealed_fields.get(exam_id, ["grade"])
-
-            for field, value in sorted(exam_data.items()):
-                salt = generate_deterministic_salt(exam_id, field, value, self)
-                target_leaf_hash = hash_leaf_with_salt(exam_id, field, value, salt)
-                proof = build_merkle_proof(target_leaf_hash, all_leaves)
-
-                if field in fields_to_reveal:
+                    proofs["exams"].setdefault(exam_id, {})
                     proofs["exams"][exam_id][field] = {"proof": proof}
-                else:
-                    proofs["exams"][exam_id][field] = {
-                        "proof": proof,
-                        "leafHash": target_leaf_hash
-                    }
 
-        # Proofs credentialStatus
-        for field, value in sorted(academic_cred["credentialSubject"]["credentialStatus"].items()):
-            salt = generate_deterministic_salt("credentialStatus", field, value, self)
-            target_leaf_hash = hash_leaf_with_salt("credentialStatus", field, value, salt)
-            proof = build_merkle_proof(target_leaf_hash, all_leaves)
+        # ✅ 3. CredentialStatus sempre incluso
+        for field, (value, salt) in sorted(
+                (f, v) for (f_type, f), v in leaf_info.items() if f_type == "credentialStatus"
+        ):
+            disclosed_claims["credentialStatus"][field] = value
+            leaf_hash = hash_leaf_with_salt("credentialStatus", field, value, salt)
+            proof = build_merkle_proof(leaf_hash, all_leaves)
             proofs["credentialStatus"][field] = {"proof": proof}
 
-        # VP finale
+        # ✅ 4. Componi VP finale
         presentation_credential_subject = {
             "id": academic_cred["credentialSubject"]["id"],
             "givenName": academic_cred["credentialSubject"]["givenName"],
@@ -275,8 +261,8 @@ class Student:
                 "proof": academic_cred["proof"]
             }
         }
+        nonce = nonce_received if nonce_received is not None else base64.b64encode(os.urandom(16)).decode()
 
-        nonce = base64.b64encode(os.urandom(16)).decode()
         created = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
         signature = self.sign(json.dumps(vp_to_sign, sort_keys=True))
 

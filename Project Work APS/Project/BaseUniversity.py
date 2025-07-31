@@ -88,7 +88,6 @@ class BaseUniversity:
         with open(did_path, "r") as f:
             return json.load(f)
 
-        
     def resolve_did(self, did: str) -> dict:
         filename = did.split(":")[-1].replace(".", "_") + "_did.json"
         path = os.path.join(self.trusted_did_folder, filename)

@@ -61,7 +61,6 @@ class Blockchain:
             self._save_chain([genesis])
             return [genesis]
 
-
     def _save_chain(self, chain):
         with open(BLOCKCHAIN_FILE, "w") as f:
             json.dump([b.to_dict() for b in chain], f, indent=2)

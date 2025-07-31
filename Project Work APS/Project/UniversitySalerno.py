@@ -10,10 +10,8 @@ from cryptography.exceptions import InvalidSignature
 import hashlib
 from MerkleTree import hash_leaf_with_salt, verify_merkle_proof, generate_deterministic_salt
 
-
 BASE_DIR = os.path.dirname(__file__)
 UNISA_DIR = os.path.join(BASE_DIR, "unisa")
-
 
 class UniversitySalerno(BaseUniversity):
     def __init__(self):
@@ -111,19 +109,17 @@ class UniversitySalerno(BaseUniversity):
             "verificationMethod": f"{self.did}#key-1",
             "jws": signature
         }
-
         self.revocation_registry.create_revocation_entry(
             namespace=revocation_namespace,
             list_id=revocation_list_id,
             revocation_key=revocation_key
         )
-
         with open(filepath, "w") as f:
             json.dump(credential_data, f, indent=2)
 
         print(f"✅ Credenziale Erasmus salvata in: {filepath}")
 
-    def verify_selective_presentation(self, presentation: dict, student) -> bool:
+    def verify_selective_presentation(self, presentation: dict, student, expected_nonce) -> bool:
         """
         Verifica una presentazione selettiva con struttura conforme
         """
@@ -150,6 +146,13 @@ class UniversitySalerno(BaseUniversity):
 
             # 2. Verifica firma della VP
             vp_proof = presentation["proof"]
+
+            # ✅ Controllo nonce
+            if expected_nonce and vp_proof.get("nonce") != expected_nonce:
+                print("❌ Nonce mismatch: la VP non è stata firmata in risposta alla challenge.")
+                return False
+            print("✅ Nonce valido.")
+
             jws = vp_proof["jws"]
             verification_method = vp_proof["verificationMethod"]
 
@@ -216,63 +219,27 @@ class UniversitySalerno(BaseUniversity):
             # Verifica proofs degli esami
             for exam_id, fields in proofs.get("exams", {}).items():
                 for field, proof_data in sorted(fields.items()):
-                    if "proof" in proof_data and "leafHash" not in proof_data:
-                        # Campo rivelato - usa value dai disclosedClaims e salt derivato dal protocollo
-                        disclosed_value = disclosed_claims.get("exams", {}).get(exam_id, {}).get(field)
-                        if disclosed_value is None:
-                            print(f"❌ Campo rivelato {exam_id}.{field} non trovato nei disclosedClaims")
-                            return False
-
-                        # Deriva il salt dal protocollo
-                        salt = generate_deterministic_salt(exam_id, field, disclosed_value, student)
-                        leaf_hash = hash_leaf_with_salt(exam_id, field, disclosed_value, salt)
-
-                    elif "leafHash" in proof_data:
-                        # Campo non rivelato - usa il leafHash direttamente
-                        leaf_hash = proof_data["leafHash"]
-
-                        # Verifica che il campo NON sia presente nei disclosedClaims
-                        if disclosed_claims.get("exams", {}).get(exam_id, {}).get(field) is not None:
-                            print(
-                                f"❌ Campo {exam_id}.{field} dovrebbe essere nascosto ma è presente nei disclosedClaims")
-                            return False
-
-                    else:
-                        print(f"❌ Dati proof mancanti per {exam_id}.{field}")
+                    disclosed_value = disclosed_claims.get("exams", {}).get(exam_id, {}).get(field)
+                    if disclosed_value is None:
+                        print(f"❌ Campo rivelato {exam_id}.{field} non trovato nei disclosedClaims")
                         return False
+
+                    salt = generate_deterministic_salt(exam_id, field, disclosed_value, student)
+                    leaf_hash = hash_leaf_with_salt(exam_id, field, disclosed_value, salt)
 
                     if not verify_merkle_proof(leaf_hash, proof_data["proof"], on_chain_root):
                         print(f"❌ Merkle proof non valida per {exam_id}.{field}")
-                        print(f"   Leaf hash: {leaf_hash}")
-                        print(f"   Root attesa: {on_chain_root}")
                         return False
 
             # Verifica proofs per credentialStatus
             for field, proof_data in proofs.get("credentialStatus", {}).items():
-                if "proof" in proof_data and "leafHash" not in proof_data:
-                    # Campo rivelato - usa value dai disclosedClaims e salt derivato dal protocollo
-                    disclosed_value = disclosed_claims.get("credentialStatus", {}).get(field)
-                    if disclosed_value is None:
-                        print(f"❌ Campo rivelato credentialStatus.{field} non trovato nei disclosedClaims")
-                        return False
-
-                    # Deriva il salt dal protocollo
-                    salt = generate_deterministic_salt("credentialStatus", field, disclosed_value, student)
-                    leaf_hash = hash_leaf_with_salt("credentialStatus", field, disclosed_value, salt)
-
-                elif "leafHash" in proof_data:
-                    # Campo non rivelato - usa il leafHash direttamente
-                    leaf_hash = proof_data["leafHash"]
-
-                    # Verifica che il campo NON sia presente nei disclosedClaims
-                    if disclosed_claims.get("credentialStatus", {}).get(field) is not None:
-                        print(
-                            f"❌ Campo credentialStatus.{field} dovrebbe essere nascosto ma è presente nei disclosedClaims")
-                        return False
-
-                else:
-                    print(f"❌ Dati proof mancanti per credentialStatus.{field}")
+                disclosed_value = disclosed_claims.get("credentialStatus", {}).get(field)
+                if disclosed_value is None:
+                    print(f"❌ Campo credentialStatus.{field} non trovato nei disclosedClaims")
                     return False
+
+                salt = generate_deterministic_salt("credentialStatus", field, disclosed_value, student)
+                leaf_hash = hash_leaf_with_salt("credentialStatus", field, disclosed_value, salt)
 
                 if not verify_merkle_proof(leaf_hash, proof_data["proof"], on_chain_root):
                     print(f"❌ Merkle proof non valida per credentialStatus.{field}")

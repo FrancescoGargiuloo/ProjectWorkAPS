@@ -11,7 +11,7 @@ class RevocationRegistry:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-            cls._instance._registry = {}  # type: ignore # type: Dict[str, Dict[str, Dict[str, bool]]]
+            cls._instance._registry = {}
             cls._instance.load_from_file(REGISTRY_FILE)
         return cls._instance
 
@@ -27,32 +27,50 @@ class RevocationRegistry:
         rev_list = ns.setdefault(list_id, {})
         if revocation_key not in rev_list:
             rev_list[revocation_key] = False
-            self.save_to_file(REGISTRY_FILE)
 
     def revoke(self, namespace: str, list_id: str, revocation_key: str) -> bool:
-        try:
-            self._registry[namespace][list_id][revocation_key] = True
-            self.save_to_file(REGISTRY_FILE)
-            return True
-        except KeyError:
-            return False
+        """Marca una credenziale come revocata e salva su file."""
+        ns = self._registry.setdefault(namespace, {})
+        rev_list = ns.setdefault(list_id, {})
+        rev_list[revocation_key] = True  # Solo True
+        self.save_to_file(REGISTRY_FILE)
+        return True
 
     def is_revoked(self, namespace: str, list_id: str, revocation_key: str) -> bool:
-        return self._registry.get(namespace, {}).get(list_id, {}).get(revocation_key)
+        """Ritorna True se revocata, False se non esiste."""
+        return self._registry.get(namespace, {}).get(list_id, {}).get(revocation_key, False)
 
     def save_to_file(self, filepath: str):
+        """Salva solo i record con valore True."""
+        filtered_registry = {
+            ns: {
+                lid: {rk: True for rk, val in rev_list.items() if val}
+                for lid, rev_list in lists.items()
+                if any(val for val in rev_list.values())
+            }
+            for ns, lists in self._registry.items()
+            if any(any(val for val in rev_list.values()) for rev_list in lists.values())
+        }
+
         with open(filepath, "w") as f:
-            json.dump(self._registry, f, indent=2)
+            json.dump(filtered_registry, f, indent=2)
 
     def load_from_file(self, filepath: str):
+        """Carica il registro, eventuali valori non True vengono ignorati."""
         if os.path.exists(filepath):
             try:
                 with open(filepath, "r") as f:
-                    self._registry = json.load(f)
+                    data = json.load(f)
+                    # Pulisce eventuali record errati
+                    self._registry = {
+                        ns: {
+                            lid: {rk: True for rk, val in rev_list.items() if val}
+                            for lid, rev_list in lists.items()
+                        }
+                        for ns, lists in data.items()
+                    }
             except json.JSONDecodeError:
                 print("⚠️ File JSON corrotto, inizializzo registro vuoto.")
                 self._registry = {}
         else:
             self._registry = {}
-
-

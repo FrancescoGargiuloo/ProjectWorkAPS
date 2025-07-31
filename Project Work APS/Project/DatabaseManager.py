@@ -110,7 +110,6 @@ class DatabaseManager:
             print(f"[!] Errore salvataggio DB {self.db_file}: {e}")
             return False
 
-
 class UserManager(DatabaseManager):
     """
     Gestisce le operazioni specifiche degli utenti sul database.

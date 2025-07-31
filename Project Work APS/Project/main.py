@@ -1,4 +1,4 @@
-import os
+import os, base64
 import json
 import uuid
 from Student import Student
@@ -242,13 +242,7 @@ def phase_4_request_grades_rennes(authenticated_students, university_rennes, uni
 
     print("\n✅ FASE 4 completata.")
 
-
-
-# --- FASE 5: Presentazione selettiva ---
 def phase_5_selective_presentation(authenticated_students, university_salerno, university_rennes):
-    """
-    Ogni studente genera una presentazione selettiva e la manda a UniSA
-    """
     print("\n" + "=" * 50)
     print("==== FASE 5: PRESENTAZIONE SELETTIVA ====")
     print("=" * 50)
@@ -256,15 +250,19 @@ def phase_5_selective_presentation(authenticated_students, university_salerno, u
     for student in authenticated_students:
         print(f"\n➡️ Generazione presentazione per {student.username}")
         try:
-            student.generate_selective_presentation_automated()
+            # ✅ UniSA genera un nonce per lo studente usando il metodo dedicato
+            nonce = university_salerno.generate_challenge(student.username)
+            print(f"🔑 UniSA ha generato il nonce: {nonce}")
+
+            # ✅ Lo studente usa il nonce ricevuto
+            student.generate_selective_presentation_automated(nonce_received=nonce)
             print("✅ Presentazione generata")
 
             with open(os.path.join(student.get_wallet_path(),"credentials", f"{student.username}_vp.json")) as f:
                 presentation = json.load(f)
 
-
             print(f"➡️ UniSA verifica la presentazione di {student.username}")
-            result = university_salerno.verify_selective_presentation(presentation, student)
+            result = university_salerno.verify_selective_presentation(presentation, student, expected_nonce=nonce)
 
             if result:
                 print("✅ Presentazione valida")
@@ -304,7 +302,6 @@ def phase_6_revoke_multiple_credentials(erasmus_student, academic_student, unive
 
     print("\n✅ FASE 6 completata.")
 
-
 # --- FASE 7: Tentativo di riuso dopo revoca ---
 def phase_7_re_presentation_after_revocation(erasmus_student, academic_student, university_salerno, university_rennes):
 
@@ -333,7 +330,11 @@ def phase_7_re_presentation_after_revocation(erasmus_student, academic_student, 
         print("❌ Presentazione accademica non trovata")
         return
 
-    if not university_salerno.verify_selective_presentation(presentation, academic_student):
+    # Genera il nonce/challenge per il DID dello studente
+    nonce = university_salerno.generate_challenge(academic_student.username)
+    print(f"🔑 UniSA ha generato il nonce: {nonce}")
+
+    if not university_salerno.verify_selective_presentation(presentation, academic_student, expected_nonce=nonce):
         print("✅ Revoca accademica funzionante (non è più valida)")
     else:
         print("⚠️ ERRORE: Accademica ancora valida dopo revoca!")
